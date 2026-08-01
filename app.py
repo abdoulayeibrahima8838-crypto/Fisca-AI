@@ -17,6 +17,7 @@ import psycopg2.extras
 from flask import Flask, g, jsonify, request, send_from_directory, session
 
 from cache_data import DOCUMENT_ACTIF, SUGGESTIONS
+from catalogue import CATALOGUE, DOCUMENTS_TELECHARGEABLES, ABONNEMENTS, lien_whatsapp_commande
 from engine import repondre
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -86,6 +87,15 @@ def init_db():
             id SERIAL PRIMARY KEY,
             question_log_id INTEGER NOT NULL REFERENCES questions_log(id),
             type TEXT NOT NULL,
+            cree_le TIMESTAMP NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS commandes (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            produit_id TEXT NOT NULL,
+            nom_produit TEXT NOT NULL,
+            statut TEXT NOT NULL DEFAULT 'en_attente',
             cree_le TIMESTAMP NOT NULL
         );
         """
@@ -413,6 +423,54 @@ def changer_mot_de_passe():
     )
     db.commit()
     return jsonify({"ok": True})
+
+
+@app.route("/api/catalogue", methods=["GET"])
+def catalogue():
+    return jsonify(
+        {
+            "livres": CATALOGUE,
+            "documents_telechargeables": DOCUMENTS_TELECHARGEABLES,
+        }
+    )
+
+
+@app.route("/api/commande", methods=["POST"])
+def passer_commande():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Vous devez etre connecte pour commander."}), 401
+
+    data = request.get_json(silent=True) or {}
+    produit_id = data.get("produit_id")
+    produit = next((p for p in CATALOGUE if p["id"] == produit_id), None)
+    if not produit:
+        return jsonify({"erreur": "Produit introuvable."}), 404
+    if not produit["disponible_a_la_vente"]:
+        return jsonify({"erreur": "Ce produit n'est pas encore disponible a la vente."}), 400
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """INSERT INTO commandes (user_id, produit_id, nom_produit, statut, cree_le)
+           VALUES (%s, %s, %s, 'en_attente', %s)""",
+        (user["id"], produit_id, produit["titre"], datetime.now()),
+    )
+    db.commit()
+
+    lien = lien_whatsapp_commande(produit["titre"], user["nom"])
+    return jsonify({"ok": True, "lien_whatsapp": lien})
+
+
+@app.route("/api/abonnements", methods=["GET"])
+def abonnements():
+    return jsonify({"abonnements": ABONNEMENTS})
+
+
+@app.route("/telechargements/<nom_fichier>")
+def telecharger_document(nom_fichier):
+    dossier = os.path.join(app.static_folder, "telechargements")
+    return send_from_directory(dossier, nom_fichier, as_attachment=True)
 
 
 @app.route("/")
