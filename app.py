@@ -1,43 +1,49 @@
 # -*- coding: utf-8 -*-
 """
-Fisca AI - serveur de test local (PHASE TEST, sans API OpenAI).
+Fisca AI - serveur (PHASE TEST, sans API OpenAI, avec base PostgreSQL Render).
 
-Lancement :
-    pip install -r requirements.txt
-    python app.py
-Puis ouvrir : http://127.0.0.1:5000
-
-Ce serveur remplace pour l'instant l'API OpenAI + File Search par le
-moteur local (engine.py) qui cherche dans cache_data.py. Le jour ou tu as
-une cle API OpenAI, on remplace juste la fonction repondre() par un vrai
-appel API - tout le reste (comptes, quota, journal) ne bouge pas.
+Ce serveur a besoin d'une variable d'environnement DATABASE_URL, fournie
+automatiquement par Render quand tu relies ta base PostgreSQL a ce
+service (onglet Environment). Sans elle, le serveur refuse de demarrer
+et l'affiche clairement dans les logs.
 """
 import hashlib
 import os
 import secrets
-import sqlite3
 from datetime import date, datetime
 
+import psycopg2
+import psycopg2.extras
 from flask import Flask, g, jsonify, request, send_from_directory, session
 
 from cache_data import DOCUMENT_ACTIF, SUGGESTIONS
 from engine import repondre
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "data", "fisca_ai.db")
 QUOTA_GRATUIT_PAR_JOUR = 10
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    # Certains fournisseurs donnent l'ancien prefixe ; psycopg2 accepte
+    # les deux, mais on normalise pour eviter toute surprise.
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.secret_key = os.environ.get("FISCA_AI_SECRET", secrets.token_hex(32))
 
 
 # ---------------------------------------------------------------------------
-# Base de donnees
+# Base de donnees (PostgreSQL)
 # ---------------------------------------------------------------------------
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
+        if not DATABASE_URL:
+            raise RuntimeError(
+                "DATABASE_URL n'est pas defini. Va dans Render > ton service "
+                "fisca-ai > Environment, et ajoute DATABASE_URL avec "
+                "l'Internal Database URL de ta base PostgreSQL."
+            )
+        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return g.db
 
 
@@ -49,46 +55,49 @@ def close_db(exception=None):
 
 
 def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.executescript(
+    if not DATABASE_URL:
+        print("ATTENTION : DATABASE_URL absent, la base ne sera pas initialisee.")
+        return
+    conn = psycopg2.connect(DATABASE_URL)
+    cur = conn.cursor()
+    cur.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             nom TEXT NOT NULL,
             contact TEXT UNIQUE NOT NULL,
             sel TEXT NOT NULL,
             mot_de_passe_hash TEXT NOT NULL,
-            cree_le TEXT NOT NULL
+            cree_le TIMESTAMP NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS questions_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
             question_brute TEXT NOT NULL,
             question_comprise TEXT,
             reponse TEXT NOT NULL,
             source TEXT,
             niveau INTEGER,
-            cree_le TEXT NOT NULL,
-            FOREIGN KEY(user_id) REFERENCES users(id)
+            cree_le TIMESTAMP NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS feedback (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question_log_id INTEGER NOT NULL,
+            id SERIAL PRIMARY KEY,
+            question_log_id INTEGER NOT NULL REFERENCES questions_log(id),
             type TEXT NOT NULL,
-            cree_le TEXT NOT NULL,
-            FOREIGN KEY(question_log_id) REFERENCES questions_log(id)
+            cree_le TIMESTAMP NOT NULL
         );
         """
     )
     conn.commit()
+    cur.close()
     conn.close()
+    print("Base PostgreSQL initialisee (tables verifiees/creees).")
 
 
 # ---------------------------------------------------------------------------
-# Mots de passe (hachage simple avec sel, sans dependance externe)
+# Mots de passe (hachage avec sel, sans dependance externe)
 # ---------------------------------------------------------------------------
 def hacher_mot_de_passe(mot_de_passe, sel):
     return hashlib.pbkdf2_hmac("sha256", mot_de_passe.encode("utf-8"), sel.encode("utf-8"), 100_000).hex()
@@ -102,17 +111,19 @@ def utilisateur_courant():
     if not user_id:
         return None
     db = get_db()
-    return db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    return cur.fetchone()
 
 
 def questions_posees_aujourdhui(user_id):
     db = get_db()
-    aujourdhui = date.today().isoformat()
-    row = db.execute(
-        "SELECT COUNT(*) as n FROM questions_log WHERE user_id = ? AND date(cree_le) = ?",
-        (user_id, aujourdhui),
-    ).fetchone()
-    return row["n"]
+    cur = db.cursor()
+    cur.execute(
+        "SELECT COUNT(*) as n FROM questions_log WHERE user_id = %s AND date(cree_le) = %s",
+        (user_id, date.today()),
+    )
+    return cur.fetchone()["n"]
 
 
 # ---------------------------------------------------------------------------
@@ -129,18 +140,19 @@ def inscription():
         return jsonify({"erreur": "Nom, contact et mot de passe (4 caracteres minimum) sont requis."}), 400
 
     db = get_db()
-    existe = db.execute("SELECT id FROM users WHERE contact = ?", (contact,)).fetchone()
-    if existe:
+    cur = db.cursor()
+    cur.execute("SELECT id FROM users WHERE contact = %s", (contact,))
+    if cur.fetchone():
         return jsonify({"erreur": "Un compte existe deja avec ce contact."}), 409
 
     sel = secrets.token_hex(16)
     hash_mdp = hacher_mot_de_passe(mot_de_passe, sel)
-    db.execute(
-        "INSERT INTO users (nom, contact, sel, mot_de_passe_hash, cree_le) VALUES (?, ?, ?, ?, ?)",
-        (nom, contact, sel, hash_mdp, datetime.now().isoformat()),
+    cur.execute(
+        "INSERT INTO users (nom, contact, sel, mot_de_passe_hash, cree_le) VALUES (%s, %s, %s, %s, %s) RETURNING id, nom",
+        (nom, contact, sel, hash_mdp, datetime.now()),
     )
+    user = cur.fetchone()
     db.commit()
-    user = db.execute("SELECT * FROM users WHERE contact = ?", (contact,)).fetchone()
     session["user_id"] = user["id"]
     return jsonify({"ok": True, "nom": user["nom"]})
 
@@ -152,7 +164,9 @@ def connexion():
     mot_de_passe = data.get("mot_de_passe") or ""
 
     db = get_db()
-    user = db.execute("SELECT * FROM users WHERE contact = ?", (contact,)).fetchone()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM users WHERE contact = %s", (contact,))
+    user = cur.fetchone()
     if not user or hacher_mot_de_passe(mot_de_passe, user["sel"]) != user["mot_de_passe_hash"]:
         return jsonify({"erreur": "Contact ou mot de passe incorrect."}), 401
 
@@ -202,10 +216,11 @@ def poser_question():
     resultat = repondre(texte)
 
     db = get_db()
-    cursor = db.execute(
+    cur = db.cursor()
+    cur.execute(
         """INSERT INTO questions_log
            (user_id, question_brute, question_comprise, reponse, source, niveau, cree_le)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
         (
             user["id"],
             texte,
@@ -213,14 +228,15 @@ def poser_question():
             resultat["reponse"],
             resultat["source"],
             resultat["niveau"],
-            datetime.now().isoformat(),
+            datetime.now(),
         ),
     )
+    id_question = cur.fetchone()["id"]
     db.commit()
 
     return jsonify(
         {
-            "id_question": cursor.lastrowid,
+            "id_question": id_question,
             "reponse": resultat["reponse"],
             "source": resultat["source"],
             "verified": resultat["verified"],
@@ -243,9 +259,10 @@ def deposer_retour():
         return jsonify({"erreur": "Requete invalide."}), 400
 
     db = get_db()
-    db.execute(
-        "INSERT INTO feedback (question_log_id, type, cree_le) VALUES (?, ?, ?)",
-        (id_question, type_retour, datetime.now().isoformat()),
+    cur = db.cursor()
+    cur.execute(
+        "INSERT INTO feedback (question_log_id, type, cree_le) VALUES (%s, %s, %s)",
+        (id_question, type_retour, datetime.now()),
     )
     db.commit()
     return jsonify({"ok": True})
@@ -259,8 +276,22 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
-if __name__ == "__main__":
+@app.route("/api/sante")
+def sante():
+    """Petite route pour verifier rapidement que la base repond."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT 1")
+        return jsonify({"ok": True, "base_de_donnees": "connectee"})
+    except Exception as e:
+        return jsonify({"ok": False, "erreur": str(e)}), 500
+
+
+with app.app_context():
     init_db()
+
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
