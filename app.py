@@ -24,6 +24,20 @@ from engine import repondre
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 QUOTA_GRATUIT_PAR_JOUR = 5
 
+# Comptes qui n'ont pas de limite quotidienne (pour tes propres tests).
+# Sur Render, ajoute la variable COMPTES_ILLIMITES avec ton contact
+# (le meme que celui utilise pour te connecter), ex: "90000000" ou
+# plusieurs separes par des virgules : "90000000,tonemail@exemple.com"
+COMPTES_ILLIMITES = {
+    c.strip().lower()
+    for c in os.environ.get("COMPTES_ILLIMITES", "").split(",")
+    if c.strip()
+}
+
+
+def est_illimite(user):
+    return user["contact"].strip().lower() in COMPTES_ILLIMITES
+
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     # Certains fournisseurs donnent l'ancien prefixe ; psycopg2 accepte
@@ -211,11 +225,15 @@ def etat_session():
     if not user:
         return jsonify({"connecte": False, "document_actif": DOCUMENT_ACTIF, "suggestions": SUGGESTIONS})
     posees = questions_posees_aujourdhui(user["id"])
+    if est_illimite(user):
+        questions_restantes = "illimité"
+    else:
+        questions_restantes = max(0, QUOTA_GRATUIT_PAR_JOUR - posees)
     return jsonify(
         {
             "connecte": True,
             "nom": user["nom"],
-            "questions_restantes": max(0, QUOTA_GRATUIT_PAR_JOUR - posees),
+            "questions_restantes": questions_restantes,
             "quota_total": QUOTA_GRATUIT_PAR_JOUR,
             "document_actif": DOCUMENT_ACTIF,
             "suggestions": SUGGESTIONS,
@@ -235,7 +253,8 @@ def poser_question():
         return jsonify({"erreur": "La question est vide."}), 400
 
     posees = questions_posees_aujourdhui(user["id"])
-    if posees >= QUOTA_GRATUIT_PAR_JOUR:
+    illimite = est_illimite(user)
+    if not illimite and posees >= QUOTA_GRATUIT_PAR_JOUR:
         return jsonify({"erreur": "quota_atteint", "message": "Vous avez atteint votre limite de questions pour aujourd'hui."}), 429
 
     resultat = repondre(texte)
@@ -266,7 +285,7 @@ def poser_question():
             "source": resultat["source"],
             "verified": resultat["verified"],
             "niveau": resultat["niveau"],
-            "questions_restantes": max(0, QUOTA_GRATUIT_PAR_JOUR - posees - 1),
+            "questions_restantes": "illimité" if illimite else max(0, QUOTA_GRATUIT_PAR_JOUR - posees - 1),
         }
     )
 
