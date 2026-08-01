@@ -18,6 +18,7 @@ from flask import Flask, g, jsonify, request, send_from_directory, session
 
 from cache_data import DOCUMENT_ACTIF, SUGGESTIONS
 from catalogue import CATALOGUE, DOCUMENTS_TELECHARGEABLES, ABONNEMENTS, lien_whatsapp_commande
+from payments import initier_paiement
 from engine import repondre
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -97,6 +98,20 @@ def init_db():
             nom_produit TEXT NOT NULL,
             statut TEXT NOT NULL DEFAULT 'en_attente',
             cree_le TIMESTAMP NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS paiements (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            type TEXT NOT NULL,
+            reference_id TEXT NOT NULL,
+            description TEXT NOT NULL,
+            montant_fcfa INTEGER NOT NULL,
+            fournisseur TEXT,
+            reference_externe TEXT,
+            statut TEXT NOT NULL DEFAULT 'en_attente',
+            cree_le TIMESTAMP NOT NULL,
+            paye_le TIMESTAMP
         );
         """
     )
@@ -423,6 +438,63 @@ def changer_mot_de_passe():
     )
     db.commit()
     return jsonify({"ok": True})
+
+
+@app.route("/api/paiement/initier", methods=["POST"])
+def initier_le_paiement():
+    """Initie un paiement (abonnement, livre ou formation). Si aucun
+    fournisseur (MyNITA/iMoney) n'est encore configure, redirige
+    automatiquement vers le circuit manuel WhatsApp deja fonctionnel -
+    l'utilisateur n'est jamais bloque."""
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Vous devez etre connecte."}), 401
+
+    data = request.get_json(silent=True) or {}
+    type_paiement = data.get("type")  # "abonnement", "livre" ou "formation"
+    reference_id = data.get("reference_id")
+    montant_fcfa = data.get("montant_fcfa")
+    description = data.get("description", "")
+
+    if not type_paiement or not reference_id or not montant_fcfa:
+        return jsonify({"erreur": "Requete de paiement incomplete."}), 400
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """INSERT INTO paiements (user_id, type, reference_id, description, montant_fcfa, statut, cree_le)
+           VALUES (%s, %s, %s, %s, %s, 'en_attente', %s) RETURNING id""",
+        (user["id"], type_paiement, reference_id, description, montant_fcfa, datetime.now()),
+    )
+    id_paiement = cur.fetchone()["id"]
+    db.commit()
+
+    resultat = initier_paiement(montant_fcfa, description, f"fiscaai-{id_paiement}")
+
+    if resultat["ok"]:
+        cur.execute(
+            "UPDATE paiements SET fournisseur = %s WHERE id = %s",
+            (resultat["fournisseur"], id_paiement),
+        )
+        db.commit()
+        return jsonify({"ok": True, "mode": "en_ligne", "lien_paiement": resultat["lien_paiement"]})
+
+    # Repli automatique : circuit manuel via WhatsApp (deja fonctionnel)
+    lien = lien_whatsapp_commande(description, user["nom"])
+    return jsonify({"ok": True, "mode": "whatsapp", "lien_paiement": lien})
+
+
+@app.route("/api/paiement/webhook/<fournisseur>", methods=["POST"])
+def webhook_paiement(fournisseur):
+    """Emplacement reserve pour recevoir les confirmations de paiement
+    de MyNITA/iMoney. NON ACTIF tant que ces fournisseurs ne sont pas
+    branches : a completer avec la verification de signature et le
+    format exacts fournis par chaque prestataire."""
+    # --- A COMPLETER lors du branchement reel du fournisseur ---
+    # data = request.get_json(silent=True) or {}
+    # verifier la signature/authenticite selon la doc du fournisseur
+    # retrouver le paiement via reference_externe, passer statut='paye', paye_le=datetime.now()
+    return jsonify({"recu": True, "note": "Webhook non actif - fournisseur non encore integre"}), 200
 
 
 @app.route("/api/catalogue", methods=["GET"])
