@@ -63,6 +63,41 @@
   .lib-card .lib-statut{font-size:11px; font-weight:600; color:var(--vert);}
   .lib-card .lib-statut::before{content:"● "; }
 
+  /* ===== NOUVEAU CATALOGUE (livres/formations/documents/abonnements) ===== */
+  .lib-tabs{display:flex; gap:6px; padding:0 0 14px; overflow-x:auto;}
+  .lib-tab{flex-shrink:0; padding:7px 14px; border-radius:20px; border:1px solid #E5DCC7; background:#fff; color:var(--marine); font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;}
+  .lib-tab.active{background:var(--marine); color:#fff; border-color:var(--marine);}
+  .lib-panel{display:none;}
+  .lib-panel.active{display:block;}
+
+  .shop-card{display:flex; gap:12px; background:#fff; border:1px solid #E5DCC7; border-radius:13px; padding:12px; margin-bottom:12px;}
+  .shop-cover{width:58px; height:78px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:26px;}
+  .shop-info{flex:1; min-width:0;}
+  .shop-titre{font-family:'Fraunces',serif; font-size:14.5px; font-weight:600; color:var(--marine); line-height:1.25; margin-bottom:2px;}
+  .shop-auteur{font-size:11.5px; color:#8A8071; margin-bottom:5px;}
+  .shop-desc{font-size:12px; color:#5C6B70; line-height:1.4; margin-bottom:8px;}
+  .shop-bottom{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .shop-prix{font-size:12.5px; font-weight:700; color:var(--vert);}
+  .shop-prix-original{font-size:11px; color:#B0A793; text-decoration:line-through; margin-right:5px;}
+  .shop-btn{padding:7px 13px; border-radius:20px; border:none; background:var(--orange); color:#fff; font-size:12px; font-weight:600; cursor:pointer;}
+  .shop-btn:hover{background:var(--orange-deep);}
+  .shop-btn.secondaire{background:var(--marine);}
+  .shop-btn.desactive{background:#DDD5C4; color:#8A8071; cursor:not-allowed;}
+  .shop-badge{font-size:10px; font-weight:700; text-transform:uppercase; color:var(--or); background:rgba(201,162,75,0.12); padding:3px 8px; border-radius:20px;}
+
+  .plan-card{background:#fff; border:1.5px solid #E5DCC7; border-radius:14px; padding:16px; margin-bottom:12px; position:relative;}
+  .plan-card.recommande{border-color:var(--orange);}
+  .plan-card .plan-tag{position:absolute; top:-10px; right:14px; background:var(--orange); color:#fff; font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 10px; border-radius:20px;}
+  .plan-nom{font-family:'Fraunces',serif; font-size:17px; font-weight:600; color:var(--marine);}
+  .plan-prix{font-size:22px; font-weight:700; color:var(--marine); margin:6px 0 10px;}
+  .plan-prix span{font-size:12px; font-weight:500; color:#8A8071;}
+  .plan-avantages{list-style:none; margin-bottom:12px;}
+  .plan-avantages li{font-size:12.5px; color:#3E5A4A; padding:4px 0; padding-left:20px; position:relative;}
+  .plan-avantages li::before{content:"✓"; position:absolute; left:0; color:var(--vert); font-weight:700;}
+  .plan-btn{width:100%; padding:10px; border-radius:10px; border:none; font-size:13px; font-weight:600; cursor:pointer;}
+  .plan-btn.actif{background:var(--marine); color:#fff;}
+  .plan-btn.inactif{background:#EFE9DB; color:#8A8071; cursor:not-allowed;}
+
   .profil-field{margin-bottom:16px;}
   .profil-field label{display:block; font-size:12px; font-weight:600; color:var(--marine); margin-bottom:5px;}
   .profil-field .value{font-size:14px; color:#3a3a3a; padding:11px 13px; background:#fff; border:1px solid #E5DCC7; border-radius:10px;}
@@ -498,33 +533,116 @@
   });
   document.getElementById('historyBack').addEventListener('click', ()=> historyScreen.classList.remove('open'));
 
-  // ===== ECRAN BIBLIOTHEQUE =====
+  // ===== ECRAN BIBLIOTHEQUE / BOUTIQUE =====
   const libraryScreen = document.getElementById('libraryScreen');
   const libraryBody = document.getElementById('libraryBody');
+
+  function renduDocumentTelechargeable(doc){
+    return '<div class="shop-card">'
+      + '<div class="shop-cover" style="background:' + doc.couverture_couleur + '22;">' + doc.couverture_emoji + '</div>'
+      + '<div class="shop-info">'
+      + '<div class="shop-titre">' + escapeHtml(doc.titre) + '</div>'
+      + '<div class="shop-auteur">' + escapeHtml(doc.auteur) + '</div>'
+      + '<div class="shop-desc">' + escapeHtml(doc.description) + '</div>'
+      + '<div class="shop-bottom"><span class="shop-prix">Gratuit</span>'
+      + '<a class="shop-btn secondaire" href="/telechargements/' + encodeURIComponent(doc.fichier) + '" target="_blank">Télécharger</a>'
+      + '</div></div></div>';
+  }
+
+  function renduLivre(livre){
+    const prix = livre.prix_fcfa ? (livre.prix_fcfa.toLocaleString('fr-FR') + ' FCFA') : 'Prix sur demande';
+    const prixBarre = livre.prix_original_fcfa
+      ? '<span class="shop-prix-original">' + livre.prix_original_fcfa.toLocaleString('fr-FR') + ' FCFA</span>'
+      : '';
+    const bouton = livre.disponible_a_la_vente
+      ? '<button class="shop-btn" data-produit="' + livre.id + '" data-titre="' + escapeHtml(livre.titre) + '">Commander</button>'
+      : '<span class="shop-badge">Bientôt disponible</span>';
+    return '<div class="shop-card">'
+      + '<div class="shop-cover" style="background:' + livre.couverture_couleur + '22;">' + livre.couverture_emoji + '</div>'
+      + '<div class="shop-info">'
+      + '<div class="shop-titre">' + escapeHtml(livre.titre) + '</div>'
+      + '<div class="shop-auteur">' + escapeHtml(livre.auteur) + ' · ' + escapeHtml(livre.type) + '</div>'
+      + '<div class="shop-desc">' + escapeHtml(livre.description) + '</div>'
+      + '<div class="shop-bottom"><span class="shop-prix">' + prixBarre + prix + '</span>' + bouton + '</div>'
+      + '</div></div>';
+  }
+
+  function renduAbonnement(plan){
+    const prix = plan.prix_fcfa === 0 ? 'Gratuit' : (plan.prix_fcfa ? plan.prix_fcfa.toLocaleString('fr-FR') + ' FCFA' : 'À définir');
+    const avantages = plan.avantages.map(a => '<li>' + escapeHtml(a) + '</li>').join('');
+    const bouton = plan.disponible
+      ? '<button class="plan-btn actif">Choisir ce plan</button>'
+      : '<button class="plan-btn inactif" disabled>Bientôt disponible</button>';
+    return '<div class="plan-card ' + (plan.recommande ? 'recommande' : '') + '">'
+      + (plan.recommande ? '<span class="plan-tag">Recommandé</span>' : '')
+      + '<div class="plan-nom">' + escapeHtml(plan.nom) + '</div>'
+      + '<div class="plan-prix">' + prix + (plan.prix_fcfa ? ' <span>/ ' + escapeHtml(plan.periode) + '</span>' : '') + '</div>'
+      + '<ul class="plan-avantages">' + avantages + '</ul>'
+      + bouton + '</div>';
+  }
+
+  async function chargerOngletTelechargements(){
+    const res = await fetch('/api/catalogue');
+    const data = await res.json();
+    document.getElementById('panelTelechargements').innerHTML = data.documents_telechargeables.map(renduDocumentTelechargeable).join('');
+  }
+
+  async function chargerOngletBoutique(){
+    const res = await fetch('/api/catalogue');
+    const data = await res.json();
+    document.getElementById('panelBoutique').innerHTML = data.livres.map(renduLivre).join('');
+    document.querySelectorAll('#panelBoutique .shop-btn[data-produit]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true; btn.textContent = 'Un instant…';
+        try{
+          const res = await fetch('/api/commande', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ produit_id: btn.dataset.produit }) });
+          const data = await res.json();
+          if(data.ok && data.lien_whatsapp){
+            window.open(data.lien_whatsapp, '_blank');
+            btn.textContent = 'Commande envoyée ✓';
+          } else {
+            btn.textContent = 'Erreur, réessayez';
+            btn.disabled = false;
+          }
+        } catch(e){
+          btn.textContent = 'Erreur, réessayez';
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  async function chargerOngletAbonnements(){
+    const res = await fetch('/api/abonnements');
+    const data = await res.json();
+    document.getElementById('panelAbonnements').innerHTML = data.abonnements.map(renduAbonnement).join('');
+  }
+
+  function switchLibTab(nom){
+    document.querySelectorAll('.lib-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === nom));
+    document.querySelectorAll('.lib-panel').forEach(p => p.classList.toggle('active', p.id === 'panel' + nom));
+  }
 
   document.getElementById('menuBibliotheque').addEventListener('click', async ()=>{
     closeDrawer();
     libraryScreen.classList.add('open');
-    libraryBody.innerHTML = '<div class="lib-empty">Chargement…</div>';
-    try{
-      const res = await fetch('/api/bibliotheque');
-      const data = await res.json();
-      let html = '';
-      data.documents.forEach(doc=>{
-        html += '<div class="lib-card">'
-          + '<span class="lib-type">' + escapeHtml(doc.type) + '</span>'
-          + '<div class="lib-titre">' + escapeHtml(doc.titre) + '</div>'
-          + '<div class="lib-auteur">' + escapeHtml(doc.auteur) + '</div>'
-          + '<div class="lib-desc">' + escapeHtml(doc.description) + '</div>'
-          + '<div class="lib-statut">' + escapeHtml(doc.statut) + '</div>'
-          + '</div>';
-      });
-      libraryBody.innerHTML = html || '<div class="lib-empty">Aucun document pour le moment.</div>';
-    } catch(e){
-      libraryBody.innerHTML = '<div class="lib-empty">Impossible de charger la bibliothèque.</div>';
-    }
+    libraryBody.innerHTML = `
+      <div class="lib-tabs">
+        <button class="lib-tab active" data-tab="Telechargements">📄 Documents officiels</button>
+        <button class="lib-tab" data-tab="Boutique">📚 Livres & Formations</button>
+        <button class="lib-tab" data-tab="Abonnements">⭐ Abonnements</button>
+      </div>
+      <div class="lib-panel active" id="panelTelechargements"><div class="lib-empty">Chargement…</div></div>
+      <div class="lib-panel" id="panelBoutique"><div class="lib-empty">Chargement…</div></div>
+      <div class="lib-panel" id="panelAbonnements"><div class="lib-empty">Chargement…</div></div>
+    `;
+    document.querySelectorAll('.lib-tab').forEach(t => t.addEventListener('click', ()=> switchLibTab(t.dataset.tab)));
+    try{ await chargerOngletTelechargements(); } catch(e){}
+    try{ await chargerOngletBoutique(); } catch(e){}
+    try{ await chargerOngletAbonnements(); } catch(e){}
   });
   document.getElementById('libraryBack').addEventListener('click', ()=> libraryScreen.classList.remove('open'));
+
 
   // ===== ECRAN PROFIL =====
   const profileScreen = document.getElementById('profileScreen');
