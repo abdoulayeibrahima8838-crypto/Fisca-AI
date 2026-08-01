@@ -20,7 +20,7 @@ from cache_data import DOCUMENT_ACTIF, SUGGESTIONS
 from engine import repondre
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-QUOTA_GRATUIT_PAR_JOUR = 10
+QUOTA_GRATUIT_PAR_JOUR = 5
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
@@ -271,9 +271,235 @@ def deposer_retour():
 # ---------------------------------------------------------------------------
 # Frontend statique
 # ---------------------------------------------------------------------------
+DOCUMENTS_BIBLIOTHEQUE = [
+    {
+        "id": "cgi2026",
+        "titre": "Code General des Impots 2026",
+        "auteur": "Republique du Niger",
+        "type": "Texte legal",
+        "description": "Extrait des articles du CGI 2026 relatifs a la facture certifiee et au systeme electronique certifie de facturation (SECeF).",
+        "statut": "Integre",
+    },
+    {
+        "id": "livre",
+        "titre": "Comprendre la Facture Certifiee",
+        "auteur": "Moutari Abdoulaye",
+        "type": "Livre",
+        "description": "Ouvrage de reference sur la facture certifiee au Niger : cadre juridique, technique, sanctions et cas pratiques.",
+        "statut": "Integre",
+    },
+    {
+        "id": "arrete473",
+        "titre": "Arrete N°00473 du 20 novembre 2020",
+        "auteur": "Ministere des Finances - DGI",
+        "type": "Arrete",
+        "description": "Conditions de commercialisation et de distribution des systemes electroniques certifies de facturation (SECeF) au Niger.",
+        "statut": "Integre",
+    },
+    {
+        "id": "arrete474",
+        "titre": "Arrete N°00474 du 20 novembre 2020",
+        "auteur": "Ministere des Finances - DGI",
+        "type": "Arrete",
+        "description": "Modalites d'utilisation des systemes electroniques de facturation et obligations des utilisateurs.",
+        "statut": "Integre",
+    },
+]
+
+
+@app.route("/api/bibliotheque", methods=["GET"])
+def bibliotheque():
+    return jsonify({"documents": DOCUMENTS_BIBLIOTHEQUE})
+
+
+@app.route("/api/historique", methods=["GET"])
+def historique():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """SELECT id, question_brute, reponse, source, niveau, cree_le
+           FROM questions_log WHERE user_id = %s
+           ORDER BY cree_le DESC LIMIT 100""",
+        (user["id"],),
+    )
+    lignes = cur.fetchall()
+
+    aujourdhui = date.today()
+    groupes = {}
+    for ligne in lignes:
+        cree_le = ligne["cree_le"]
+        jour = cree_le.date() if hasattr(cree_le, "date") else aujourdhui
+        if jour == aujourdhui:
+            cle = "Aujourd'hui"
+        elif (aujourdhui - jour).days == 1:
+            cle = "Hier"
+        elif (aujourdhui - jour).days <= 7:
+            cle = "Cette semaine"
+        else:
+            cle = "Plus ancien"
+        groupes.setdefault(cle, []).append(
+            {
+                "id": ligne["id"],
+                "question": ligne["question_brute"],
+                "reponse": ligne["reponse"],
+                "source": ligne["source"],
+                "trouve": ligne["niveau"] == 1,
+                "date": cree_le.isoformat() if hasattr(cree_le, "isoformat") else str(cree_le),
+            }
+        )
+
+    ordre = ["Aujourd'hui", "Hier", "Cette semaine", "Plus ancien"]
+    resultat = [{"groupe": g, "questions": groupes[g]} for g in ordre if g in groupes]
+    return jsonify({"historique": resultat})
+
+
+@app.route("/api/profil", methods=["GET"])
+def voir_profil():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+    posees = questions_posees_aujourdhui(user["id"])
+    cree_le = user["cree_le"]
+    return jsonify(
+        {
+            "nom": user["nom"],
+            "contact": user["contact"],
+            "cree_le": cree_le.isoformat() if hasattr(cree_le, "isoformat") else str(cree_le),
+            "questions_restantes": max(0, QUOTA_GRATUIT_PAR_JOUR - posees),
+            "quota_total": QUOTA_GRATUIT_PAR_JOUR,
+        }
+    )
+
+
+@app.route("/api/profil", methods=["POST"])
+def modifier_profil():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+    data = request.get_json(silent=True) or {}
+    nouveau_nom = (data.get("nom") or "").strip()
+    if not nouveau_nom:
+        return jsonify({"erreur": "Le nom ne peut pas etre vide."}), 400
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("UPDATE users SET nom = %s WHERE id = %s", (nouveau_nom, user["id"]))
+    db.commit()
+    return jsonify({"ok": True, "nom": nouveau_nom})
+
+
+@app.route("/api/mot-de-passe", methods=["POST"])
+def changer_mot_de_passe():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+    data = request.get_json(silent=True) or {}
+    ancien = data.get("ancien_mot_de_passe") or ""
+    nouveau = data.get("nouveau_mot_de_passe") or ""
+
+    if hacher_mot_de_passe(ancien, user["sel"]) != user["mot_de_passe_hash"]:
+        return jsonify({"erreur": "Ancien mot de passe incorrect."}), 401
+    if len(nouveau) < 4:
+        return jsonify({"erreur": "Le nouveau mot de passe doit faire au moins 4 caracteres."}), 400
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        "UPDATE users SET mot_de_passe_hash = %s WHERE id = %s",
+        (hacher_mot_de_passe(nouveau, user["sel"]), user["id"]),
+    )
+    db.commit()
+    return jsonify({"ok": True})
+
+
 @app.route("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
+
+
+@app.route("/admin")
+def admin():
+    """Page de consultation simple, protegee par mot de passe (ADMIN_PASSWORD).
+    Usage : https://ton-site.onrender.com/admin?motdepasse=xxxxx
+    """
+    mot_de_passe_attendu = os.environ.get("ADMIN_PASSWORD")
+    if not mot_de_passe_attendu:
+        return "ADMIN_PASSWORD n'est pas configure. Ajoute cette variable d'environnement sur Render pour activer cette page.", 503
+
+    fourni = request.args.get("motdepasse", "")
+    if fourni != mot_de_passe_attendu:
+        return "Mot de passe manquant ou incorrect. Utilise : /admin?motdepasse=TON_MOT_DE_PASSE", 401
+
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("SELECT COUNT(*) as n FROM users")
+    nb_users = cur.fetchone()["n"]
+    cur.execute("SELECT COUNT(*) as n FROM questions_log")
+    nb_questions = cur.fetchone()["n"]
+    cur.execute("SELECT COUNT(*) as n FROM feedback WHERE type = 'utile'")
+    nb_utile = cur.fetchone()["n"]
+    cur.execute("SELECT COUNT(*) as n FROM feedback WHERE type = 'erreur'")
+    nb_erreur = cur.fetchone()["n"]
+
+    cur.execute("SELECT nom, contact, cree_le FROM users ORDER BY cree_le DESC LIMIT 50")
+    users = cur.fetchall()
+
+    cur.execute(
+        """SELECT q.question_brute, q.question_comprise, q.reponse, q.niveau, q.cree_le, u.nom
+           FROM questions_log q JOIN users u ON u.id = q.user_id
+           ORDER BY q.cree_le DESC LIMIT 50"""
+    )
+    questions = cur.fetchall()
+
+    def echapper(texte):
+        if texte is None:
+            return ""
+        return (
+            str(texte).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        )
+
+    lignes_users = "".join(
+        f"<tr><td>{echapper(u['nom'])}</td><td>{echapper(u['contact'])}</td><td>{echapper(u['cree_le'])}</td></tr>"
+        for u in users
+    )
+    lignes_questions = "".join(
+        f"<tr><td>{echapper(q['nom'])}</td><td>{echapper(q['question_brute'])}</td>"
+        f"<td>{echapper(q['question_comprise'])}</td><td>{'Trouvee' if q['niveau']==1 else 'Non trouvee'}</td>"
+        f"<td>{echapper(q['cree_le'])}</td></tr>"
+        for q in questions
+    )
+
+    html = f"""
+    <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fisca AI - Admin</title>
+    <style>
+      body{{font-family:sans-serif; padding:16px; background:#FBF9F4; color:#172227;}}
+      h1{{color:#0E2A3A;}} h2{{color:#0E2A3A; margin-top:28px;}}
+      .stats{{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;}}
+      .stat{{background:#fff; border:1px solid #E5DCC7; border-radius:10px; padding:12px 16px;}}
+      .stat b{{display:block; font-size:22px; color:#E07A3F;}}
+      table{{width:100%; border-collapse:collapse; background:#fff; font-size:13px;}}
+      th, td{{border:1px solid #E5DCC7; padding:6px 8px; text-align:left; vertical-align:top;}}
+      th{{background:#0E2A3A; color:#fff;}}
+    </style></head><body>
+    <h1>Fisca AI — Tableau de bord (phase test)</h1>
+    <div class="stats">
+      <div class="stat"><b>{nb_users}</b>Comptes créés</div>
+      <div class="stat"><b>{nb_questions}</b>Questions posées</div>
+      <div class="stat"><b>{nb_utile}</b>👍 Utile</div>
+      <div class="stat"><b>{nb_erreur}</b>👎 Signalé</div>
+    </div>
+    <h2>Derniers comptes (50 max)</h2>
+    <table><tr><th>Nom</th><th>Contact</th><th>Créé le</th></tr>{lignes_users}</table>
+    <h2>Dernières questions (50 max)</h2>
+    <table><tr><th>Utilisateur</th><th>Question posée</th><th>Comprise comme</th><th>Résultat</th><th>Date</th></tr>{lignes_questions}</table>
+    </body></html>
+    """
+    return html
 
 
 @app.route("/api/sante")
