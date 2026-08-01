@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fisca AI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --marine: #0E2A3A; --marine-deep: #081B26; --marine-line: #1C3D4F;
+    --orange: #E07A3F; --orange-deep: #C6642E; --vert: #3E7D5A; --or: #C9A24B;
+    --cream: #F6F2E9; --ink: #172227; --paper: #FBF9F4;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Inter', sans-serif; background: var(--marine-deep); color: var(--ink); height:100vh; overflow:hidden;}
+  @supports (height: 100dvh){ body{height:100dvh;} }
+
+  .app{display:flex; flex-direction:column; height:100vh; max-width:480px; margin:0 auto; background: var(--paper); position:relative; box-shadow: 0 0 60px rgba(0,0,0,0.4);}
+  @supports (height: 100dvh){ .app{height:100dvh;} }
+
+  /* ===== HEADER ===== */
+  .header{background: var(--marine); color: var(--cream); padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom: 1px solid var(--marine-line);}
+  .header-left{display:flex; align-items:center; gap:12px; min-width:0; flex-shrink:1;}
+  .logo-mark{width:30px; height:30px; border-radius:7px; background: linear-gradient(155deg, var(--orange), var(--orange-deep)); display:flex; align-items:center; justify-content:center; font-family:'Fraunces', serif; font-weight:700; font-size:15px; color:var(--cream); flex-shrink:0;}
+  .logo-text{font-family:'Fraunces', serif; font-weight:600; font-size:16.5px;}
+  .logo-sub{font-size:9.5px; color:var(--or); letter-spacing:1.4px; text-transform:uppercase; margin-top:-2px; font-weight:600;}
+  .version-pill{background: rgba(201,162,75,0.14); border:1px solid rgba(201,162,75,0.4); color: var(--or); font-size:11px; font-weight:600; letter-spacing:0.4px; padding:4px 12px; border-radius:20px; text-transform:uppercase; white-space:nowrap; flex-shrink:0;}
+  .logout-btn{background:none; border:none; color:var(--cream); opacity:0.7; cursor:pointer; font-size:12px; text-decoration:underline; flex-shrink:0;}
+
+  /* ===== SOURCE BAR ===== */
+  .source-bar{background: var(--marine-deep); color: var(--cream); padding:9px 16px; display:flex; align-items:center; gap:8px; font-size:12.5px; border-bottom:1px solid var(--marine-line);}
+  .source-bar .source-label{opacity:0.6; font-weight:500;}
+  .source-bar .source-name{font-weight:600;}
+
+  /* ===== AUTH SCREEN ===== */
+  .auth-screen{flex:1; display:flex; flex-direction:column; justify-content:center; padding:28px 24px; overflow-y:auto;}
+  .auth-mark{width:56px; height:56px; border-radius:16px; margin:0 auto 18px; background: linear-gradient(155deg, var(--orange), var(--orange-deep)); display:flex; align-items:center; justify-content:center; font-family:'Fraunces', serif; font-weight:700; font-size:26px; color:var(--cream);}
+  .auth-title{font-family:'Fraunces', serif; font-weight:600; font-size:21px; color:var(--marine); text-align:center; margin-bottom:6px;}
+  .auth-sub{font-size:13px; color:#6C7A7F; text-align:center; margin-bottom:26px;}
+  .field-label{font-size:12px; font-weight:600; color:var(--marine); margin-bottom:5px; display:block;}
+  .field-input{width:100%; padding:11px 13px; border:1.5px solid #E5DCC7; border-radius:10px; font-size:14px; margin-bottom:14px; font-family:'Inter',sans-serif; background:#fff;}
+  .field-input:focus{outline:none; border-color:var(--orange);}
+  .auth-submit{width:100%; padding:12px; border:none; border-radius:10px; background:var(--orange); color:#fff; font-weight:600; font-size:14.5px; cursor:pointer; margin-top:4px;}
+  .auth-submit:hover{background:var(--orange-deep);}
+  .auth-switch{text-align:center; margin-top:16px; font-size:13px; color:#6C7A7F;}
+  .auth-switch a{color:var(--orange); font-weight:600; cursor:pointer; text-decoration:none;}
+  .auth-error{background:#FBEAE6; color:#B0432B; border:1px solid #F0C7BB; padding:9px 12px; border-radius:8px; font-size:12.5px; margin-bottom:14px; display:none;}
+
+  /* ===== CHAT ===== */
+  .chat{flex:1; overflow-y:auto; padding:20px 16px 12px; display:flex; flex-direction:column; gap:16px; background: radial-gradient(circle at 15% 8%, rgba(201,162,75,0.05), transparent 45%), var(--paper);}
+  .welcome{text-align:center; padding:24px 12px 8px;}
+  .welcome-mark{width:52px; height:52px; border-radius:14px; margin:0 auto 16px; background: linear-gradient(155deg, var(--orange), var(--orange-deep)); display:flex; align-items:center; justify-content:center; font-family:'Fraunces', serif; font-weight:700; font-size:24px; color:var(--cream);}
+  .welcome h1{font-family:'Fraunces', serif; font-weight:600; font-size:22px; color: var(--marine); margin-bottom:8px;}
+  .welcome p{font-size:14px; color:#5C6B70; line-height:1.5; max-width:300px; margin:0 auto;}
+  .suggestions{display:flex; flex-direction:column; gap:8px; margin-top:22px;}
+  .suggestion-chip{background: var(--cream); border:1px solid #E5DCC7; color: var(--marine); padding:11px 14px; border-radius:11px; font-size:13.5px; text-align:left; cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:9px;}
+  .suggestion-chip:hover{border-color: var(--orange); background: #FBF3EA;}
+  .suggestion-chip::before{content:"?"; width:18px; height:18px; border-radius:50%; background: var(--marine); color:var(--cream); font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+
+  .msg-row{display:flex; flex-direction:column; max-width:88%;}
+  .msg-row.user{align-self:flex-end; align-items:flex-end;}
+  .msg-row.bot{align-self:flex-start; align-items:flex-start;}
+  .bubble{padding:12px 14px; border-radius:14px; font-size:14px; line-height:1.55;}
+  .msg-row.user .bubble{background: var(--marine); color: var(--cream); border-bottom-right-radius:4px;}
+  .msg-row.bot .bubble{background: var(--cream); border:1px solid #E5DCC7; color: var(--ink); border-bottom-left-radius:4px;}
+  .sources-block{margin-top:7px; padding:9px 12px; background: rgba(62,125,90,0.07); border-left:2.5px solid var(--vert); border-radius:6px; font-size:11.5px; color:#3E5A4A;}
+  .sources-block.unverified{background: rgba(224,122,63,0.08); border-left-color: var(--orange); color:#8A4A24;}
+  .sources-block .src-title{font-weight:700; text-transform:uppercase; letter-spacing:0.4px; font-size:10px; margin-bottom:3px;}
+  .msg-actions{display:flex; gap:4px; margin-top:6px;}
+  .msg-actions button{background:none; border:none; cursor:pointer; font-size:13px; padding:4px 6px; border-radius:6px; color:#9A9184; opacity:0.7;}
+  .msg-actions button:hover{opacity:1; background:#EFE9DB;}
+  .msg-actions button.active{opacity:1; background:#EFE9DB;}
+  .typing{display:flex; gap:4px; padding:14px 16px; background:var(--cream); border:1px solid #E5DCC7; border-radius:14px; border-bottom-left-radius:4px; width:fit-content;}
+  .typing span{width:6px; height:6px; border-radius:50%; background:var(--orange); animation: bounce 1.3s infinite ease-in-out;}
+  .typing span:nth-child(2){animation-delay:0.15s;} .typing span:nth-child(3){animation-delay:0.3s;}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0); opacity:0.5;} 30%{transform:translateY(-4px); opacity:1;}}
+
+  .quota-bar{padding:6px 16px; font-size:10.5px; color:#8A8071; text-align:center; border-top:1px solid #EDE6D6; background:var(--paper);}
+  .quota-bar b{color:var(--marine);}
+  .input-zone{padding:12px 14px 16px; background: var(--paper); border-top:1px solid #E5DCC7; display:flex; align-items:flex-end; gap:8px;}
+  .input-field{flex:1; background:#fff; border:1.5px solid #E5DCC7; border-radius:20px; padding:11px 16px; font-size:14px; font-family:'Inter',sans-serif; outline:none;}
+  .input-field:focus{border-color:var(--orange);}
+  .send-btn{width:40px; height:40px; border-radius:50%; border:none; background: var(--orange); color:white; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .send-btn:hover{background:var(--orange-deep);}
+  .disclaimer{text-align:center; font-size:9.5px; color:#B0A793; padding-bottom:2px;}
+  .hidden{display:none !important;}
+
+  @media (max-width: 360px){
+    .logo-sub{display:none;} .logo-text{font-size:15px;}
+    .version-pill{font-size:9.5px; padding:3px 8px;}
+    .header{padding:12px 10px;} .source-bar{font-size:11px; padding:8px 10px;}
+    .chat{padding:16px 12px 10px;} .welcome h1{font-size:19px;} .welcome p{font-size:13px;}
+    .input-zone{padding:10px 10px 14px;}
+  }
+  @media (max-width: 300px){
+    .version-pill{display:none;} .logo-text{font-size:13.5px;} .header-left{gap:8px;}
+    .logo-mark{width:26px; height:26px; font-size:13px;} .header{padding:10px 8px;}
+    .source-bar .source-label{display:none;} .source-bar{font-size:10.5px; padding:7px 8px; gap:6px;}
+    .suggestion-chip{font-size:12.5px; padding:10px 12px;}
+    .welcome-mark{width:44px; height:44px; font-size:20px;} .welcome h1{font-size:17px;}
+    .disclaimer{font-size:8.5px; padding:0 6px 2px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-mark">F</div>
+      <div>
+        <div class="logo-text">Fisca AI</div>
+        <div class="logo-sub">Fisca Times</div>
+      </div>
+    </div>
+    <div class="version-pill">Phase test</div>
+    <button class="logout-btn hidden" id="logoutBtn">Déconnexion</button>
+  </div>
+
+  <!-- ===== ECRAN AUTHENTIFICATION ===== -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-mark">F</div>
+    <div class="auth-title" id="authTitle">Connexion</div>
+    <div class="auth-sub" id="authSub">Accédez à votre espace Fisca AI</div>
+
+    <div class="auth-error" id="authError"></div>
+
+    <div id="nomField" class="hidden">
+      <label class="field-label">Nom</label>
+      <input type="text" class="field-input" id="nomInput" placeholder="Votre nom">
+    </div>
+    <label class="field-label">Téléphone ou email</label>
+    <input type="text" class="field-input" id="contactInput" placeholder="ex. 90000000">
+    <label class="field-label">Mot de passe</label>
+    <input type="password" class="field-input" id="mdpInput" placeholder="4 caractères minimum">
+
+    <button class="auth-submit" id="authSubmitBtn">Se connecter</button>
+    <div class="auth-switch" id="authSwitch">Pas encore de compte ? <a id="authSwitchLink">Créer un compte</a></div>
+  </div>
+
+  <!-- ===== ECRAN CHAT ===== -->
+  <div id="chatScreen" class="hidden" style="display:none; flex-direction:column; flex:1; min-height:0;">
+    <div class="source-bar">
+      <span>📘</span>
+      <span class="source-label">Source active</span>
+      <span class="source-name" id="sourceName">Comprendre la Facture Certifiée</span>
+    </div>
+
+    <div class="chat" id="chat">
+      <div class="welcome" id="welcome">
+        <div class="welcome-mark">F</div>
+        <h1>Bonjour<span id="welcomeName"></span>.</h1>
+        <p>Je suis Fisca AI, assistant documentaire spécialisé dans la fiscalité nigérienne. Posez votre première question.</p>
+        <div class="suggestions" id="suggestions"></div>
+      </div>
+    </div>
+
+    <div class="quota-bar" id="quotaBar"></div>
+
+    <div class="input-zone">
+      <input type="text" class="input-field" id="inputField" placeholder="Posez votre question…">
+      <button class="send-btn" id="sendBtn">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10L18 3L11 18L9 11L2 10Z" fill="white"/></svg>
+      </button>
+    </div>
+    <div class="disclaimer">Fisca AI explique des documents fiscaux — ne remplace pas un conseiller ou l'administration.</div>
+  </div>
+
+</div>
+
+<script>
+  const API = "";
+  let mode = "connexion"; // ou "inscription"
+
+  const authScreen = document.getElementById('authScreen');
+  const chatScreen = document.getElementById('chatScreen');
+  const authTitle = document.getElementById('authTitle');
+  const authSub = document.getElementById('authSub');
+  const authError = document.getElementById('authError');
+  const nomField = document.getElementById('nomField');
+  const nomInput = document.getElementById('nomInput');
+  const contactInput = document.getElementById('contactInput');
+  const mdpInput = document.getElementById('mdpInput');
+  const authSubmitBtn = document.getElementById('authSubmitBtn');
+  const authSwitch = document.getElementById('authSwitch');
+  const authSwitchLink = document.getElementById('authSwitchLink');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  function setMode(m){
+    mode = m;
+    authError.style.display = 'none';
+    if(mode === 'connexion'){
+      authTitle.textContent = 'Connexion';
+      authSub.textContent = 'Accédez à votre espace Fisca AI';
+      nomField.classList.add('hidden');
+      authSubmitBtn.textContent = 'Se connecter';
+      authSwitch.innerHTML = "Pas encore de compte ? <a id='authSwitchLink'>Créer un compte</a>";
+    } else {
+      authTitle.textContent = 'Créer un compte';
+      authSub.textContent = 'Rejoignez Fisca AI en quelques secondes';
+      nomField.classList.remove('hidden');
+      authSubmitBtn.textContent = 'Créer mon compte';
+      authSwitch.innerHTML = "Déjà un compte ? <a id='authSwitchLink'>Se connecter</a>";
+    }
+    document.getElementById('authSwitchLink').addEventListener('click', ()=> setMode(mode === 'connexion' ? 'inscription' : 'connexion'));
+  }
+  document.getElementById('authSwitchLink').addEventListener('click', ()=> setMode('inscription'));
+
+  function showError(msg){
+    authError.textContent = msg;
+    authError.style.display = 'block';
+  }
+
+  authSubmitBtn.addEventListener('click', async ()=>{
+    const contact = contactInput.value.trim();
+    const mdp = mdpInput.value;
+    if(!contact || mdp.length < 4){ showError('Merci de remplir un contact et un mot de passe (4 caractères min).'); return; }
+
+    const url = mode === 'connexion' ? '/api/connexion' : '/api/inscription';
+    const body = mode === 'connexion'
+      ? { contact, mot_de_passe: mdp }
+      : { nom: nomInput.value.trim() || 'Utilisateur', contact, mot_de_passe: mdp };
+
+    if(mode === 'inscription' && !nomInput.value.trim()){ showError('Merci d\\'indiquer votre nom.'); return; }
+
+    try{
+      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      if(!res.ok){ showError(data.erreur || 'Une erreur est survenue.'); return; }
+      startChat(data.nom);
+    } catch(e){
+      showError('Impossible de contacter le serveur. Vérifiez qu\\'il est bien lancé.');
+    }
+  });
+
+  logoutBtn.addEventListener('click', async ()=>{
+    await fetch('/api/deconnexion', { method:'POST' });
+    location.reload();
+  });
+
+  // ===== CHAT =====
+  const chat = document.getElementById('chat');
+  const welcome = document.getElementById('welcome');
+  const welcomeName = document.getElementById('welcomeName');
+  const suggestionsBox = document.getElementById('suggestions');
+  const quotaBar = document.getElementById('quotaBar');
+  const inputField = document.getElementById('inputField');
+  const sendBtn = document.getElementById('sendBtn');
+  let questionsRestantes = 10;
+
+  function startChat(nom){
+    authScreen.style.display = 'none';
+    chatScreen.classList.remove('hidden');
+    chatScreen.style.display = 'flex';
+    logoutBtn.classList.remove('hidden');
+    welcomeName.textContent = nom ? (', ' + nom) : '';
+    refreshSession();
+  }
+
+  async function refreshSession(){
+    const res = await fetch('/api/session');
+    const data = await res.json();
+    if(!data.connecte){ location.reload(); return; }
+    questionsRestantes = data.questions_restantes;
+    updateQuotaBar();
+    document.getElementById('sourceName').textContent = data.document_actif;
+    suggestionsBox.innerHTML = '';
+    data.suggestions.forEach(q=>{
+      const btn = document.createElement('button');
+      btn.className = 'suggestion-chip';
+      btn.textContent = q;
+      btn.addEventListener('click', ()=> handleQuestion(q));
+      suggestionsBox.appendChild(btn);
+    });
+  }
+
+  function updateQuotaBar(){
+    quotaBar.innerHTML = 'Il vous reste <b>' + questionsRestantes + '</b> question' + (questionsRestantes===1?'':'s') + ' aujourd\\'hui — plan Gratuit';
+  }
+
+  function addMessage(text, isUser, meta){
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + (isUser ? 'user' : 'bot');
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    row.appendChild(bubble);
+
+    if(!isUser && meta && meta.source){
+      const src = document.createElement('div');
+      src.className = 'sources-block' + (meta.verified === false ? ' unverified' : '');
+      src.innerHTML = '<div class="src-title">' + (meta.verified === false ? 'Contenu non vérifié' : 'Source') + '</div>📘 ' + meta.source;
+      row.appendChild(src);
+
+      const actions = document.createElement('div');
+      actions.className = 'msg-actions';
+      const btnUp = document.createElement('button'); btnUp.textContent = '👍'; btnUp.title = 'Utile';
+      const btnDown = document.createElement('button'); btnDown.textContent = '👎'; btnDown.title = 'Signaler une erreur';
+      btnUp.addEventListener('click', ()=> envoyerRetour(meta.id_question, 'utile', btnUp, btnDown));
+      btnDown.addEventListener('click', ()=> envoyerRetour(meta.id_question, 'erreur', btnUp, btnDown));
+      actions.appendChild(btnUp); actions.appendChild(btnDown);
+      row.appendChild(actions);
+    }
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function envoyerRetour(idQuestion, type, btnUp, btnDown){
+    btnUp.classList.toggle('active', type === 'utile');
+    btnDown.classList.toggle('active', type === 'erreur');
+    try{
+      await fetch('/api/retour', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id_question: idQuestion, type }) });
+    } catch(e){}
+  }
+
+  function showTyping(){
+    const t = document.createElement('div');
+    t.className = 'typing'; t.id = 'typingIndicator';
+    t.innerHTML = '<span></span><span></span><span></span>';
+    chat.appendChild(t); chat.scrollTop = chat.scrollHeight;
+  }
+  function hideTyping(){ const t = document.getElementById('typingIndicator'); if(t) t.remove(); }
+
+  async function handleQuestion(texte){
+    if(welcome && welcome.parentElement){ welcome.remove(); }
+    addMessage(texte, true);
+    showTyping();
+
+    try{
+      const res = await fetch('/api/question', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ texte }) });
+      const data = await res.json();
+      hideTyping();
+      if(res.status === 429){
+        addMessage(data.message, false, null);
+        return;
+      }
+      if(!res.ok){
+        addMessage("Une erreur est survenue : " + (data.erreur || 'inconnue') + '.', false, null);
+        return;
+      }
+      questionsRestantes = data.questions_restantes;
+      updateQuotaBar();
+      addMessage(data.reponse, false, { source: data.source, verified: data.verified, id_question: data.id_question });
+    } catch(e){
+      hideTyping();
+      addMessage("Impossible de contacter le serveur. Vérifiez qu'il est bien lancé.", false, null);
+    }
+  }
+
+  sendBtn.addEventListener('click', ()=>{
+    const val = inputField.value.trim();
+    if(!val) return;
+    handleQuestion(val);
+    inputField.value = '';
+  });
+  inputField.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') sendBtn.click(); });
+
+  // Verifier si deja connecte au chargement
+  (async ()=>{
+    const res = await fetch('/api/session');
+    const data = await res.json();
+    if(data.connecte){ startChat(data.nom); }
+  })();
+</script>
+
+</body>
+</html>
