@@ -40,6 +40,7 @@ QA_LIBRARY = [
     {
         "id": "systeme-interne",
         "keywords": ["systeme interne", "deja paye", "mon propre logiciel", "logiciel deja", "propre systeme"],
+        "expressions": ["changer de systeme de facturation interne", "systeme de facturation interne dois je le changer"],
         "question_type": "J'ai deja un systeme de facturation interne, dois-je le changer ?",
         "answer": (
             "Si vous utilisez votre propre systeme de facturation electronique, "
@@ -53,6 +54,7 @@ QA_LIBRARY = [
     {
         "id": "sanctions",
         "keywords": ["sanction", "amende", "penalite", "consequence non delivrance"],
+        "concepts_negation": ["NON_UTILISATION_SYSTEME"],
         "question_type": "Quelles sont les sanctions en cas de non-respect ?",
         "answer": (
             "Deux cas bien distincts. 1) Vous n'avez PAS de systeme electronique "
@@ -74,6 +76,7 @@ QA_LIBRARY = [
     {
         "id": "impact-tva",
         "keywords": ["tva", "deduction tva", "consequence tva", "recuperer taxe", "recuperer tva"],
+        "expressions": ["impact tva", "impact facture non certifiee sur tva", "consequence tva facture non certifiee", "impact sur la tva"],
         "question_type": "Quel est l'impact sur la TVA si la facture n'est pas certifiee ?",
         "answer": (
             "La TVA sur un achat n'est deductible que si elle est mentionnee "
@@ -86,6 +89,7 @@ QA_LIBRARY = [
     {
         "id": "impact-isb",
         "keywords": ["isb", "charge deductible", "impot sur les benefices", "impot sur les societes"],
+        "expressions": ["impact isb", "impact facture non certifiee sur isb", "consequence sur isb", "deductibilite charge facture non certifiee", "impact sur l isb"],
         "question_type": "Quel est l'impact sur l'ISB si la facture n'est pas certifiee ?",
         "answer": (
             "Pour etre deductible, une charge doit etre appuyee d'une facture "
@@ -167,6 +171,7 @@ QA_LIBRARY = [
     {
         "id": "derogations",
         "keywords": ["derogation", "dispense", "exempte", "qui est dispense", "exception"],
+        "expressions": ["obtenir une dispense pour utiliser le secef", "dispense d utiliser le secef"],
         "question_type": "Peut-on obtenir une dispense d'utiliser le SECeF ?",
         "answer": (
             "Oui, deux voies possibles. D'abord, une liste de categories "
@@ -195,6 +200,7 @@ QA_LIBRARY = [
     {
         "id": "documents-tenant-lieu",
         "keywords": ["document tenant lieu", "document de remplacement", "sans facture", "douane", "quittance", "menue depense", "petite depense"],
+        "expressions": ["remplacer la facture certifiee", "document tenant lieu de facture", "document equivalent a une facture", "justificatif a la place de la facture", "documents peuvent remplacer"],
         "question_type": "Quels documents peuvent remplacer la facture certifiee ?",
         "answer": (
             "Plusieurs types de documents sont reconnus comme equivalents a "
@@ -212,6 +218,7 @@ QA_LIBRARY = [
     {
         "id": "pas-de-secef-vs-machine-inutilisee",
         "keywords": ["pas de machine", "sans secef", "pas equipe", "je n'ai pas la machine", "pas de systeme", "pas de secef", "aucun systeme", "du tout", "zero equipement", "aucun equipement"],
+        "concepts_negation": ["ABSENCE_SYSTEME"],
         "question_type": "Que risque-t-on si on n'a pas du tout de systeme SECeF ?",
         "answer": (
             "Toute personne soumise a l'obligation qui vend des biens ou "
@@ -227,6 +234,7 @@ QA_LIBRARY = [
     {
         "id": "panne-secef",
         "keywords": ["panne", "en panne", "dysfonctionnement machine", "machine cassee", "ne marche plus"],
+        "expressions": ["panne du dispositif secef", "en cas de panne machine", "panne du secef"],
         "question_type": "Que faire en cas de panne du dispositif SECeF ?",
         "answer": (
             "Vous devez disposer a l'avance d'un SECeF de remplacement pour "
@@ -297,6 +305,7 @@ QA_LIBRARY = [
     {
         "id": "systemes-identiques",
         "keywords": ["systemes identiques", "meme systeme", "differents dispositifs", "tous pareils"],
+        "expressions": ["systemes de certification identiques", "les systemes sont ils tous identiques"],
         "question_type": "Les systemes de certification sont-ils tous identiques ?",
         "answer": (
             "Non. Plusieurs types de dispositifs homologues existent : "
@@ -345,6 +354,7 @@ QA_LIBRARY = [
     {
         "id": "definition-facture",
         "keywords": ["c'est quoi une facture", "definition facture", "qu'est ce qu'une facture", "signification facture"],
+        "expressions": ["definition juridique facture", "sens juridique de la facture", "qu est ce qu une facture juridiquement", "definition legale facture", "au sens juridique"],
         "question_type": "Qu'est-ce qu'une facture, au sens juridique ?",
         "answer": (
             "Une facture est un document commercial qui atteste d'une "
@@ -404,6 +414,7 @@ QA_LIBRARY = [
     {
         "id": "phases-deploiement",
         "keywords": ["depuis quand facture certifiee", "phases deploiement", "historique reforme", "quand a commence"],
+        "expressions": ["la facture certifiee existe depuis quand", "phases de deploiement de la facture certifiee"],
         "question_type": "Depuis quand la facture certifiee existe, et quelles ont ete ses phases de deploiement ?",
         "answer": (
             "La facture certifiee a ete instauree par la loi de decembre "
@@ -462,6 +473,7 @@ QA_LIBRARY = [
     {
         "id": "types-facture",
         "keywords": ["types de facture", "facture exportation", "facture des ventes"],
+        "expressions": ["differents types de facture certifiee", "quels sont les types de facture"],
         "question_type": "Quels sont les differents types de facture certifiee ?",
         "answer": (
             "Il existe 3 types de facture certifiee : la facture des "
@@ -476,6 +488,7 @@ QA_LIBRARY = [
     {
         "id": "facture-avoir",
         "keywords": ["facture d'avoir", "annuler une facture", "corriger une facture", "retour marchandise"],
+        "expressions": ["quand utiliser une facture d avoir", "facture d avoir et quand l utiliser"],
         "question_type": "Qu'est-ce qu'une facture d'avoir, et quand l'utiliser ?",
         "answer": (
             "Une facture d'avoir sert a annuler ou rectifier une facture "
@@ -551,6 +564,7 @@ QA_LIBRARY = [
     {
         "id": "modes-deploiement",
         "keywords": ["mode de deploiement", "connexion directe reseau cloud", "quel mode choisir"],
+        "expressions": ["mode de deploiement selon la taille de l entreprise", "quels modes de deploiement choisir"],
         "question_type": "Quels modes de deploiement choisir selon la taille de l'entreprise ?",
         "answer": (
             "3 modes existent. La connexion directe (poste individuel "
@@ -568,6 +582,7 @@ QA_LIBRARY = [
     {
         "id": "arf",
         "keywords": ["arf", "attestation de regularite fiscale", "c'est quoi l'arf"],
+        "expressions": ["pourquoi secef necessaire pour l arf", "obtenir l arf avec le secef", "secef necessaire pour l arf"],
         "question_type": "Qu'est-ce que l'ARF, et pourquoi le SECeF est-il necessaire pour l'obtenir ?",
         "answer": (
             "L'ARF (Attestation de Regularite Fiscale) est un document "
@@ -584,6 +599,7 @@ QA_LIBRARY = [
     {
         "id": "exemption-precompte-isb",
         "keywords": ["precompte isb", "exemption acheteur", "precompte impot benefices"],
+        "expressions": ["exempte du precompte isb avec secef", "acheteur exempte du precompte"],
         "question_type": "L'acheteur est-il exempte du precompte ISB avec un SECeF ?",
         "answer": (
             "Oui. L'acheteur disposant d'un certificat de conformite au "
