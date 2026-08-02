@@ -105,8 +105,15 @@ MOTS_VIDES = {
 # Reglages du moteur - centralises ici pour etre faciles a ajuster
 # une fois que tu auras des vrais logs de production.
 SEUIL_SCORE = 1.0        # score absolu minimal (inchange par rapport a la v2)
-SEUIL_COUVERTURE = 0.45  # part MINIMALE (ponderee) des mots de la question
-                          # qui doit etre retrouvee dans l'entree gagnante
+SEUIL_COUVERTURE = 0.30  # part MINIMALE (ponderee) des mots de la question
+                          # (parmi ceux qui existent quelque part dans le
+                          # corpus) qui doit etre retrouvee dans l'entree
+                          # gagnante. Volontairement modere : le but est
+                          # d'ecarter les entrees qui ne partagent quasi
+                          # rien avec la question (cas du hors-sujet
+                          # historique/TVA), pas de punir des entrees a
+                          # keywords courts et cibles (design voulu de
+                          # cache_data.py).
 DEBUG_MOTEUR = os.environ.get("DEBUG_MOTEUR", "0") == "1"
 
 
@@ -145,6 +152,29 @@ for _vocab in _VOCABULAIRES.values():
         _FREQUENCE_MOTS[_mot] += 1
 _NB_ENTREES = max(len(QA_LIBRARY), 1)
 
+# Tous les mots qui apparaissent comme keyword d'AU MOINS UNE entree.
+# Un mot de la question absent de cet ensemble ne pourra structurellement
+# JAMAIS matcher aucune entree (il n'existe dans aucun vocabulaire) : il
+# ne doit donc jamais etre compte contre une entree dans le calcul de la
+# couverture, sous peine de punir a tort des entrees par ailleurs
+# correctes simplement parce que la question est formulee avec des mots
+# (ex. "impact", "consequence") absents de toute liste de keywords.
+_VOCAB_GLOBAL = set(_FREQUENCE_MOTS.keys())
+
+
+def _mot_potentiellement_matchable(mot_q):
+    """True si ce mot a ne serait-ce qu'une chance de matcher AU MOINS
+    une entree du corpus (exactement ou par ressemblance floue, avec la
+    meme tolerance que le scoring). Sert uniquement a decider si un mot
+    doit compter dans le denominateur de la couverture."""
+    if mot_q in _VOCAB_GLOBAL:
+        return True
+    if len(mot_q) >= 4:
+        for mot_v in _VOCAB_GLOBAL:
+            if len(mot_v) >= 4 and difflib.SequenceMatcher(None, mot_q, mot_v).ratio() >= 0.82:
+                return True
+    return False
+
 
 def _poids_mot(mot):
     """Poids inspire du TF-IDF : plus un mot est rare parmi les entrees,
@@ -170,6 +200,13 @@ def _score_entree(mots_question, entree):
     poids_total = 0.0
     poids_matche = 0.0
     for mot_q in mots_question:
+        # Un mot absent de TOUT le corpus (aucune entree ne l'a comme
+        # keyword) ne peut par construction jamais matcher : on l'ignore
+        # completement, plutot que de penaliser la couverture de chaque
+        # entree pour un mot qu'aucune n'a jamais eu de chance de matcher.
+        if not _mot_potentiellement_matchable(mot_q):
+            continue
+
         p = _poids_mot(mot_q)
         poids_total += p
 
