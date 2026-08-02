@@ -3,25 +3,34 @@
 Moteur de comprehension de Fisca AI.
 
 Architecture "filet de securite" :
-1) On tente d'abord une reponse via l'API OpenAI (si une cle est configuree
-   ET que l'appel reussit) - c'est le moteur intelligent, capable de
-   comprendre n'importe quelle formulation et de chercher dans tout le
-   CGI, pas seulement les questions pre-ecrites.
-2) Si OpenAI n'est pas configure, ou si l'appel echoue pour QUELQUE
-   RAISON QUE CE SOIT (carte bancaire refusee, credit epuise, panne
-   OpenAI, pas de connexion, delai depasse...), on bascule
-   AUTOMATIQUEMENT et SILENCIEUSEMENT sur le moteur local base sur
-   mots-cles (cache_data.py). L'utilisateur recoit toujours une reponse,
-   jamais une page d'erreur.
+1) On tente d'abord une reponse via l'API OpenAI (si configuree et si
+   l'appel reussit).
+2) Sinon (ou en cas d'echec), on bascule automatiquement et
+   silencieusement sur le moteur local base sur mots-cles ci-dessous.
 
-Tant que OPENAI_API_KEY et OPENAI_VECTOR_STORE_ID ne sont pas configures
-sur Render, ce fichier se comporte EXACTEMENT comme avant : 100% moteur
-local, aucun risque, aucun cout.
+MOTEUR LOCAL - v2 (corrige un bug de double-comptage) :
+La version precedente comparait chaque mot de la question a CHAQUE
+phrase-mot-cle d'une entree separement, et additionnait les points a
+chaque fois. Consequence : une entree avec plusieurs mots-cles contenant
+tous le mot "machine" (ex. "vendre ma machine", "revendre ma machine",
+"ceder ma machine") accumulait des points en double/triple pour ce seul
+mot, et pouvait l'emporter a tort face a une entree plus pertinente mais
+avec moins de repetitions.
+
+La v2 corrige ca : chaque mot de la question n'est compte QU'UNE SEULE
+FOIS par entree (on garde sa MEILLEURE correspondance dans le
+vocabulaire de l'entree, pas la somme de toutes ses correspondances).
+Elle ajoute aussi une ponderation inspiree du TF-IDF : les mots qui
+apparaissent dans presque toutes les entrees (ex. "facture", "certifie",
+"secef") comptent moins qu'un mot distinctif (ex. "panne", "revendre",
+"nif") qui n'apparait que dans une ou deux entrees.
 """
 import os
 import re
+import math
 import unicodedata
 import difflib
+from collections import Counter
 
 from cache_data import QA_LIBRARY
 
@@ -31,9 +40,7 @@ from cache_data import QA_LIBRARY
 try:
     from openai import OpenAI
     _client = OpenAI() if os.environ.get("OPENAI_API_KEY") else None
-    print(f"[Fisca AI] Client OpenAI initialise : {_client is not None}")
-except Exception as e:
-    print(f"[Fisca AI] ECHEC initialisation client OpenAI : {type(e).__name__}: {e}")
+except Exception:
     _client = None
 
 OPENAI_VECTOR_STORE_ID = os.environ.get("OPENAI_VECTOR_STORE_ID")
@@ -55,9 +62,6 @@ SYSTEM_PROMPT = (
 
 
 def repondre_ia(question_brute):
-    """Tente une reponse via OpenAI (File Search sur les documents
-    officiels). Retourne None si indisponible pour une raison quelconque -
-    c'est le signal pour l'appelant de basculer sur le moteur local."""
     if not _client or not OPENAI_VECTOR_STORE_ID:
         return None
     try:
@@ -67,7 +71,7 @@ def repondre_ia(question_brute):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": question_brute},
             ],
-            tools=[{"type": "file_search", "vector_store_ids": [OPENAI_VECTOR_STORE_ID]}],
+            tools=[{"type": "file_search", "vector_store_ids": [OPENAI_VECTOR_STORE_ID], "max_num_results": 4}],
             timeout=OPENAI_TIMEOUT_SECONDS,
         )
         texte = getattr(response, "output_text", "") or ""
@@ -77,25 +81,30 @@ def repondre_ia(question_brute):
             "niveau": 1,
             "reponse": texte.strip(),
             "source": "Reponse generee par l'IA a partir des documents officiels charges",
-            "verified": None,  # ni "test" ni verifie a la main : generee dynamiquement
+            "verified": None,
             "question_comprise": question_brute,
             "moteur": "openai",
         }
     except Exception as e:
-        # Carte refusee, credit epuise, panne OpenAI, pas de reseau,
-        # delai depasse... Peu importe la cause : on ne casse jamais
-        # l'experience utilisateur. On journalise pour toi (visible dans
-        # les logs Render) et on bascule sur le moteur local.
         print(f"[Fisca AI] Echec de l'appel OpenAI ({type(e).__name__}: {e}) - bascule sur le moteur local.")
         return None
 
 
 # ---------------------------------------------------------------------------
-# Partie moteur local (toujours disponible, jamais de dependance externe)
+# Moteur local v2
 # ---------------------------------------------------------------------------
+MOTS_VIDES = {
+    "le", "la", "les", "de", "des", "du", "un", "une", "est", "ce", "cette",
+    "que", "qui", "quel", "quelle", "quels", "quelles", "a", "et",
+    "en", "pour", "sur", "au", "aux", "par", "avec", "dans", "je", "tu",
+    "il", "elle", "vous", "nous", "mon", "ma", "mes", "ton", "ta", "tes",
+    "son", "sa", "ses", "si", "ne", "pas", "on", "se", "sont", "ai", "as",
+    "faire", "fait", "etre", "dois", "doit", "peut", "peux", "comment",
+}
+
+
 def normaliser(texte):
-    """Minuscule, sans accents, sans ponctuation - pour comparer sans se
-    faire piquer par une majuscule ou un accent oublie."""
+    """Minuscule, sans accents, sans ponctuation."""
     texte = texte.lower().strip()
     texte = unicodedata.normalize("NFD", texte)
     texte = "".join(c for c in texte if unicodedata.category(c) != "Mn")
@@ -104,40 +113,75 @@ def normaliser(texte):
     return texte
 
 
-def _score_entree(mots_question, entree):
-    """Calcule un score de correspondance en tolerant les fautes de
-    frappe (comparaison de similarite), pas seulement une correspondance
-    exacte de mots-cles."""
-    score = 0
+def _mots_significatifs(texte):
+    return [m for m in normaliser(texte).split() if len(m) >= 3 and m not in MOTS_VIDES]
+
+
+def _construire_vocabulaire(entree):
+    """Seuls les 'keywords' (choisis expres pour la recherche) alimentent
+    le vocabulaire - PAS le texte de 'question_type', qui est une phrase
+    naturelle destinee a l'affichage et qui contient souvent des mots
+    parasites sans rapport (ex. 'passe' dans 'que se passe-t-il')."""
+    mots = set()
     for mot_cle in entree["keywords"]:
-        mot_cle_norm = normaliser(mot_cle)
-        if mot_cle_norm in mots_question:
-            score += 2
-            continue
-        for mot_q in mots_question.split():
-            for mot_k in mot_cle_norm.split():
-                if len(mot_k) < 4:
-                    continue
-                ratio = difflib.SequenceMatcher(None, mot_q, mot_k).ratio()
-                if ratio >= 0.8:
-                    score += 1
+        mots.update(_mots_significatifs(mot_cle))
+    return mots
+
+
+# Vocabulaire de chaque entree + frequence de chaque mot a travers TOUTES
+# les entrees (pour ponderer : un mot rare est plus distinctif qu'un mot
+# qui revient partout).
+_VOCABULAIRES = {entree["id"]: _construire_vocabulaire(entree) for entree in QA_LIBRARY}
+_FREQUENCE_MOTS = Counter()
+for _vocab in _VOCABULAIRES.values():
+    for _mot in _vocab:
+        _FREQUENCE_MOTS[_mot] += 1
+_NB_ENTREES = max(len(QA_LIBRARY), 1)
+
+
+def _poids_mot(mot):
+    """Poids inspire du TF-IDF : plus un mot est rare parmi les entrees,
+    plus il compte. Toujours strictement positif."""
+    freq = _FREQUENCE_MOTS.get(mot, 1)
+    return math.log((_NB_ENTREES + 1) / freq) + 0.3
+
+
+def _score_entree(mots_question, entree):
+    """Chaque mot de la question ne compte qu'UNE SEULE FOIS pour cette
+    entree (on garde sa meilleure correspondance, pas la somme)."""
+    vocab = _VOCABULAIRES[entree["id"]]
+    score = 0.0
+    for mot_q in mots_question:
+        meilleure_ratio = 0.0
+        for mot_v in vocab:
+            if mot_q == mot_v:
+                ratio = 1.0
+            elif len(mot_q) >= 4 and len(mot_v) >= 4:
+                ratio = difflib.SequenceMatcher(None, mot_q, mot_v).ratio()
+            else:
+                ratio = 1.0 if mot_q == mot_v else 0.0
+            if ratio > meilleure_ratio:
+                meilleure_ratio = ratio
+        if meilleure_ratio >= 0.82:
+            score += meilleure_ratio * _poids_mot(mot_q)
     return score
 
 
 def repondre_locale(question_brute):
-    """Moteur de secours base sur mots-cles. Toujours disponible, ne
-    depend d'aucun service externe."""
-    mots_question = normaliser(question_brute)
+    mots_question = _mots_significatifs(question_brute)
+    if not mots_question:
+        mots_question = normaliser(question_brute).split()
 
     meilleur = None
-    meilleur_score = 0
+    meilleur_score = 0.0
     for entree in QA_LIBRARY:
         score = _score_entree(mots_question, entree)
         if score > meilleur_score:
             meilleur_score = score
             meilleur = entree
 
-    if meilleur and meilleur_score >= 2:
+    # Seuil : au moins l'equivalent d'un mot assez distinctif bien matche.
+    if meilleur and meilleur_score >= 1.0:
         return {
             "niveau": 1,
             "reponse": meilleur["answer"],
@@ -161,14 +205,7 @@ def repondre_locale(question_brute):
     }
 
 
-# ---------------------------------------------------------------------------
-# Point d'entree unique utilise par app.py
-# ---------------------------------------------------------------------------
-def repondre(question_brute, forcer_local=False):
-    """Essaie l'IA si configuree ET autorisee pour ce plan ; bascule
-    automatiquement sur le moteur local sinon, ou en cas d'echec."""
-    if forcer_local:
-        return repondre_locale(question_brute)
+def repondre(question_brute):
     resultat_ia = repondre_ia(question_brute)
     if resultat_ia is not None:
         return resultat_ia
