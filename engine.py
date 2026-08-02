@@ -164,9 +164,11 @@ def repondre_locale(question_brute):
 # ---------------------------------------------------------------------------
 # Point d'entree unique utilise par app.py
 # ---------------------------------------------------------------------------
-def repondre(question_brute):
-    """Essaie l'IA si configuree ; bascule automatiquement sur le moteur
-    local en cas d'absence de configuration OU d'echec de l'appel."""
+def repondre(question_brute, forcer_local=False):
+    """Essaie l'IA si configuree ET autorisee pour ce plan ; bascule
+    automatiquement sur le moteur local sinon, ou en cas d'echec."""
+    if forcer_local:
+        return repondre_locale(question_brute)
     resultat_ia = repondre_ia(question_brute)
     if resultat_ia is not None:
         return resultat_ia
