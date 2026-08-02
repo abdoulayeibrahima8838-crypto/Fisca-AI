@@ -38,6 +38,27 @@ COMPTES_ILLIMITES = {
 def est_illimite(user):
     return user["contact"].strip().lower() in COMPTES_ILLIMITES
 
+
+COMPTES_STANDARD = {
+    c.strip().lower()
+    for c in os.environ.get("COMPTES_STANDARD", "").split(",")
+    if c.strip()
+}
+COMPTES_EXPERT = {
+    c.strip().lower()
+    for c in os.environ.get("COMPTES_EXPERT", "").split(",")
+    if c.strip()
+}
+
+
+def plan_utilisateur(user):
+    contact = user["contact"].strip().lower()
+    if contact in COMPTES_EXPERT:
+        return "expert"
+    if contact in COMPTES_STANDARD:
+        return "standard"
+    return "gratuit"
+
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     # Certains fournisseurs donnent l'ancien prefixe ; psycopg2 accepte
@@ -257,7 +278,8 @@ def poser_question():
     if not illimite and posees >= QUOTA_GRATUIT_PAR_JOUR:
         return jsonify({"erreur": "quota_atteint", "message": "Vous avez atteint votre limite de questions pour aujourd'hui."}), 429
 
-    resultat = repondre(texte)
+    plan = plan_utilisateur(user)
+    resultat = repondre(texte, forcer_local=(plan == "gratuit"))
 
     db = get_db()
     cur = db.cursor()
