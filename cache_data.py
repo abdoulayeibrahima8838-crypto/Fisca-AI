@@ -169,17 +169,27 @@ QA_LIBRARY = [
         "keywords": ["derogation", "dispense", "exempte", "qui est dispense", "exception"],
         "question_type": "Peut-on obtenir une dispense d'utiliser le SECeF ?",
         "answer": (
-            "Oui, sous conditions strictes. Certaines professions ont beneficie "
-            "de derogations temporaires par le passe (ex. pharmacies, "
-            "cliniques, cabinets medicaux en 2021). En dehors de ces cas "
-            "historiques, toute personne non dispensee peut demander une "
-            "derogation individuelle : elle doit justifier pourquoi elle ne "
-            "peut pas utiliser de SECeF, ne pas exercer dans la distribution "
-            "ou une profession liberale, et sa demande est examinee en "
-            "plusieurs etapes par les services fiscaux avant decision finale "
-            "du Directeur Central ou Regional."
+            "Oui, deux voies possibles. D'abord, une liste de categories "
+            "sont dispensees de plein droit : l'Etat et les collectivites "
+            "publiques (hors activite commerciale), les agriculteurs/"
+            "eleveurs/jardiniers vendant sans transformation (mais pas les "
+            "intermediaires qui revendent), les bailleurs d'immeubles nus a "
+            "titre personnel, les societes publiques d'eau et d'electricite, "
+            "les banques et etablissements financiers, les compagnies "
+            "d'assurance, les compagnies aeriennes etrangeres (pour leurs "
+            "propres produits), et les distributeurs agrees de "
+            "telecommunications (cartes prepayees). Le regime de l'impot "
+            "synthetique a beneficie d'une exemption temporaire du 30 "
+            "septembre 2021 au 1er fevrier 2023 (sauf importateurs/"
+            "exportateurs, exclus de cette dispense - attention, une "
+            "entreprise immatriculee sous 'IMPORT EXPORT' sans reellement "
+            "importer/exporter est automatiquement exclue). Ensuite, toute "
+            "autre personne non dispensee peut demander une derogation "
+            "individuelle en justifiant pourquoi elle ne peut pas utiliser "
+            "de SECeF (hors distribution et professions liberales), "
+            "examinee par les services fiscaux avant decision finale."
         ),
-        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 3, sections 7.3-7.4 ; Art. 368 bis du CGI",
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 3, sections 7.2-7.4 ; Art. 368 bis du CGI",
         "verified": True,
     },
     {
@@ -330,6 +340,381 @@ QA_LIBRARY = [
             "PME/TPE qui n'ont pas les moyens du materiel physique."
         ),
         "source": "Art. 21 et 23 de l'Arrete 00473 du 20 novembre 2020 (prix libre) ; Comprendre la Facture Certifiee (M. Abdoulaye), chap. 5 (avantages du e-SECeF, prix indicatif cite par la DGI)",
+        "verified": True,
+    },
+    {
+        "id": "definition-facture",
+        "keywords": ["c'est quoi une facture", "definition facture", "qu'est ce qu'une facture", "signification facture"],
+        "question_type": "Qu'est-ce qu'une facture, au sens juridique ?",
+        "answer": (
+            "Une facture est un document commercial qui atteste d'une "
+            "transaction entre un vendeur et un acheteur, precisant les "
+            "biens ou services fournis ainsi que les conditions de "
+            "paiement. Pour la facture certifiee specifiquement, le CGI la "
+            "definit comme une facture emise et transmise via un systeme "
+            "electronique certifie de facturation par la DGI."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 1, sections I-II ; Art. 368 bis du CGI",
+        "verified": True,
+    },
+    {
+        "id": "fonctions-facture",
+        "keywords": ["fonctions de la facture", "role de la facture", "a quoi sert une facture"],
+        "question_type": "Quelles sont les fonctions d'une facture ?",
+        "answer": (
+            "La facture remplit 4 fonctions principales : juridique "
+            "(preuve d'un contrat, utile en cas de litige), comptable "
+            "(enregistrement des recettes/depenses, justificatif "
+            "d'audit), fiscale (calcul et controle des taxes), et "
+            "douaniere (determination des droits a l'import/export, lutte "
+            "contre la fraude)."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 1, section II",
+        "verified": True,
+    },
+    {
+        "id": "archivage-factures",
+        "keywords": ["archiver les factures", "conservation facture", "garder les factures", "obligation archivage"],
+        "question_type": "Quelle est l'obligation d'archivage des factures ?",
+        "answer": (
+            "L'archivage des factures est une obligation legale. Il "
+            "permet de repondre aux demandes des autorites, de se "
+            "proteger en cas de litige, et d'eviter des sanctions. Les "
+            "factures doivent etre bien organisees, accessibles, et "
+            "conservees dans un format securise (papier ou electronique)."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 1, section III",
+        "verified": True,
+    },
+    {
+        "id": "limites-factures-traditionnelles",
+        "keywords": ["facture word", "facture excel", "facture papier", "inconvenients facture traditionnelle"],
+        "question_type": "Quels sont les inconvenients des factures traditionnelles (Word/Excel/papier) ?",
+        "answer": (
+            "Les factures traditionnelles presentent plusieurs "
+            "inconvenients : erreurs humaines de saisie/calcul, "
+            "tracabilite limitee lors des controles, archivage physique "
+            "contraignant, et risque de fraude/falsification plus eleve. "
+            "Elles sont d'ailleurs considerees comme obsoletes et non "
+            "conformes depuis la reforme, sauf cas specifiques dispenses."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 1, section IV",
+        "verified": True,
+    },
+    {
+        "id": "phases-deploiement",
+        "keywords": ["depuis quand facture certifiee", "phases deploiement", "historique reforme", "quand a commence"],
+        "question_type": "Depuis quand la facture certifiee existe, et quelles ont ete ses phases de deploiement ?",
+        "answer": (
+            "La facture certifiee a ete instauree par la loi de decembre "
+            "2019, avec une entree en vigueur effective en septembre "
+            "2021. Le deploiement s'est fait en 3 phases : 1) 2020 - "
+            "instauration du SECeF, 2) 2021 - grandes/moyennes "
+            "entreprises et regime reel d'imposition, 3) 2023 - inclusion "
+            "des petites et micro-entreprises, avec un systeme devenu "
+            "totalement gratuit (e-SECeF)."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 2, section III",
+        "verified": True,
+    },
+    {
+        "id": "resultats-reforme",
+        "keywords": ["resultats de la reforme", "impact recettes fiscales", "ca a rapporte quoi"],
+        "question_type": "Quels resultats concrets la reforme a-t-elle produits ?",
+        "answer": (
+            "La reforme a permis une amelioration notable des recettes "
+            "fiscales : pour la premiere fois en 2022, la DGI a depasse "
+            "le seuil de 600 milliards de FCFA en recettes cash. Elle a "
+            "aussi apporte une meilleure transparence des transactions et "
+            "une reduction des fraudes commerciales et fiscales."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 2, section IV",
+        "verified": True,
+    },
+    {
+        "id": "refus-vendeur",
+        "keywords": ["vendeur refuse", "il ne veut pas me donner la facture", "refus de facture"],
+        "question_type": "Que faire si le vendeur refuse de delivrer une facture certifiee ?",
+        "answer": (
+            "En tant que client, vous devez d'abord exiger la facture "
+            "certifiee, meme si le vendeur ne la propose pas "
+            "spontanement. Si le fournisseur persiste dans son refus, "
+            "vous devez en informer la DGI. Exiger sa facture, c'est "
+            "s'assurer que la TVA payee est bien reversee a l'Etat."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 3, section III",
+        "verified": True,
+    },
+    {
+        "id": "verification-facture",
+        "keywords": ["verifier une facture", "authenticite facture", "comment verifier", "sygma"],
+        "question_type": "Comment verifier l'authenticite d'une facture certifiee ?",
+        "answer": (
+            "Le client peut verifier une facture certifiee via le site "
+            "ou l'application mobile de la DGI (sygma.impots.gouv.ne), "
+            "grace aux references ou au QR code figurant sur la facture. "
+            "En cas de doute, contactez immediatement la DGI ou demandez "
+            "au fournisseur de corriger les erreurs ou incoherences."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 3, section IV",
+        "verified": True,
+    },
+    {
+        "id": "types-facture",
+        "keywords": ["types de facture", "facture exportation", "facture des ventes"],
+        "question_type": "Quels sont les differents types de facture certifiee ?",
+        "answer": (
+            "Il existe 3 types de facture certifiee : la facture des "
+            "ventes (transactions domestiques a l'interieur du pays), la "
+            "facture d'exportation (ventes a l'etranger, avec mentions "
+            "specifiques), et la facture d'avoir (annulation ou "
+            "rectification d'une facture anterieure)."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 3, section V",
+        "verified": True,
+    },
+    {
+        "id": "facture-avoir",
+        "keywords": ["facture d'avoir", "annuler une facture", "corriger une facture", "retour marchandise"],
+        "question_type": "Qu'est-ce qu'une facture d'avoir, et quand l'utiliser ?",
+        "answer": (
+            "Une facture d'avoir sert a annuler ou rectifier une facture "
+            "anterieure. Elle intervient notamment en cas de retour de "
+            "marchandises, d'erreur dans le montant facture, "
+            "d'ajustement suite a des conditions speciales, ou de "
+            "regularisation d'une avance."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 3, section 5.3",
+        "verified": True,
+    },
+    {
+        "id": "regime-synthetique-dates",
+        "keywords": ["regime synthetique", "date exemption", "import export dispense"],
+        "question_type": "Quelles sont les dates precises d'exemption pour le regime de l'impot synthetique ?",
+        "answer": (
+            "Les contribuables au regime de l'impot synthetique ont "
+            "beneficie d'une exemption temporaire du 30 septembre 2021 "
+            "au 1er fevrier 2023 - apres cette date, ils doivent delivrer "
+            "la facture certifiee. Les importateurs/exportateurs sous ce "
+            "regime sont exclus de cette dispense des le debut. "
+            "Attention : une entreprise immatriculee sous la profession "
+            "'IMPORT EXPORT' sans reellement importer ni exporter sera "
+            "automatiquement exclue de la derogation - le bon choix "
+            "d'activite est donc essentiel."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 3, section 7.2 ; Circulaire 00024 du 22 fevrier 2023",
+        "verified": True,
+    },
+    {
+        "id": "elements-securite-facture",
+        "keywords": ["qr code facture", "code secef", "elements de securite"],
+        "question_type": "Quels elements de securite figurent sur une facture certifiee ?",
+        "answer": (
+            "Une facture certifiee comporte un code SECeF (identifiant "
+            "unique attribue a chaque facture) et un QR code contenant "
+            "des donnees essentielles : le NIF, la signature "
+            "electronique, la date, et le numero de la machine ou du "
+            "systeme ayant genere la facture."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 3, section 6.4",
+        "verified": True,
+    },
+    {
+        "id": "difference-sfe-mcf-uf",
+        "keywords": ["difference sfe mcf uf", "c'est quoi sfe", "c'est quoi mcf", "c'est quoi uf"],
+        "question_type": "Quelle est la difference entre SFE, MCF et UF ?",
+        "answer": (
+            "Le SFE (Systeme de Facturation Electronique) est le "
+            "logiciel qui genere les factures. Le MCF (Module de "
+            "Controle de Facturation) est la machine qui securise et "
+            "transmet les donnees a la DGI. Quand les deux sont reunis "
+            "dans une seule machine, on parle d'Unite de Facturation "
+            "(UF)."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 4, section I",
+        "verified": True,
+    },
+    {
+        "id": "materialise-vs-dematerialise",
+        "keywords": ["materialise ou dematerialise", "difference secef version", "quelle version choisir"],
+        "question_type": "Quelle est la difference entre SECeF materialise et dematerialise ?",
+        "answer": (
+            "Le SECeF materialise repose sur des equipements physiques "
+            "(MCF/SFE), fonctionne via le reseau GSM, et est accessible "
+            "sans connexion internet classique. Le SECeF dematerialise "
+            "(e-SECeF) est base sur une plateforme numerique en ligne et "
+            "necessite une connexion internet active."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 4, section II",
+        "verified": True,
+    },
+    {
+        "id": "modes-deploiement",
+        "keywords": ["mode de deploiement", "connexion directe reseau cloud", "quel mode choisir"],
+        "question_type": "Quels modes de deploiement choisir selon la taille de l'entreprise ?",
+        "answer": (
+            "3 modes existent. La connexion directe (poste individuel "
+            "relie au MCF, sans reseau) convient aux petites entreprises "
+            "a faible volume, cout reduit. Le reseau local (plusieurs "
+            "postes connectes a un serveur) convient aux entreprises "
+            "moyennes avec plusieurs points de vente. Le cloud "
+            "(hebergement distant via internet) convient aux grandes "
+            "entreprises avec plusieurs succursales, plus flexible mais "
+            "necessite une connexion stable."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 4, section VIII.4",
+        "verified": True,
+    },
+    {
+        "id": "arf",
+        "keywords": ["arf", "attestation de regularite fiscale", "c'est quoi l'arf"],
+        "question_type": "Qu'est-ce que l'ARF, et pourquoi le SECeF est-il necessaire pour l'obtenir ?",
+        "answer": (
+            "L'ARF (Attestation de Regularite Fiscale) est un document "
+            "obligatoire pour de nombreuses demarches : marche public, "
+            "agrement, concours bancaire, operations avec le Tresor "
+            "public, transaction douaniere, titres miniers, ou meme une "
+            "candidature elective. Son obtention repose sur la "
+            "conformite fiscale du contribuable, notamment l'utilisation "
+            "du SECeF."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 6, section 3.3 ; Art. 45 et 356 du CGI",
+        "verified": True,
+    },
+    {
+        "id": "exemption-precompte-isb",
+        "keywords": ["precompte isb", "exemption acheteur", "precompte impot benefices"],
+        "question_type": "L'acheteur est-il exempte du precompte ISB avec un SECeF ?",
+        "answer": (
+            "Oui. L'acheteur disposant d'un certificat de conformite au "
+            "SECeF est exempte du paiement du precompte de l'Impot sur "
+            "les Benefices (ISB). En attendant la definition complete "
+            "des conditions de delivrance de ce certificat, il doit "
+            "fournir une copie des documents prouvant l'acquisition et "
+            "l'activation de son SECeF au grossiste ou industriel."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 6, section 3.1 ; Art. 38 bis du CGI",
+        "verified": True,
+    },
+    {
+        "id": "facture-non-certifiee-tribunal",
+        "keywords": ["facture non certifiee tribunal", "preuve devant la justice", "valeur juridique facture"],
+        "question_type": "Une facture non certifiee tient-elle devant un tribunal ?",
+        "answer": (
+            "Non, ou en tout cas difficilement. Les tribunaux "
+            "reconnaissent la facture certifiee comme une preuve solide "
+            "et incontestable dans les litiges commerciaux et fiscaux. "
+            "Un jugement de 2024 du tribunal de commerce du Niger a "
+            "refuse de reconnaitre des creances basees sur des factures "
+            "non certifiees."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 6, section 2",
+        "verified": True,
+    },
+    {
+        "id": "cessation-activite",
+        "keywords": ["cessation activite", "fermer mon entreprise", "desactiver secef", "arret entreprise"],
+        "question_type": "Que faire du SECeF en cas de cessation d'activite ?",
+        "answer": (
+            "En cas de fermeture ou de cessation d'entreprise, de mise "
+            "hors d'usage du SECeF ou d'arret pour toute autre raison, "
+            "vous devez engager une procedure de desactivation dans un "
+            "delai de sept (7) jours ouvrables. Le SECeF desactive doit "
+            "ensuite etre conserve pendant quatre (4) ans."
+        ),
+        "source": "Art. 5 (point p) de l'Arrete 00474 du 20 novembre 2020",
+        "verified": True,
+    },
+    {
+        "id": "dossier-certification-machine",
+        "keywords": ["dossier de certification", "documents pour certifier", "demande de certification machine"],
+        "question_type": "Quels documents fournir pour faire certifier sa propre machine ?",
+        "answer": (
+            "Le dossier de demande de certification, adresse au "
+            "Directeur General des Impots, doit comprendre : un "
+            "formulaire de demande dument rempli, une copie de l'extrait "
+            "du Registre de Commerce et du Credit Mobilier, une copie de "
+            "la carte d'importateur ou d'une carte professionnelle en "
+            "cours de validite, une attestation de regularite fiscale en "
+            "cours de validite, et tout autre document specifie par note "
+            "circulaire de la DGI."
+        ),
+        "source": "Art. 8 de l'Arrete 00473 du 20 novembre 2020",
+        "verified": True,
+    },
+    {
+        "id": "definition-e-secef",
+        "keywords": ["c'est quoi le e-secef", "definition e-secef", "e-sfe e-mcf"],
+        "question_type": "Qu'est-ce que le e-SECeF, et quels sont ses composants ?",
+        "answer": (
+            "Le e-SECeF est une application dematerialisee permettant "
+            "d'emettre et de certifier des factures en ligne. Il est "
+            "compose de deux elements : le e-SFE (application de "
+            "facturation en ligne fournie par la DGI) et le e-MCF "
+            "(module de controle virtuel). Contrairement au SECeF "
+            "materialise qui utilise le reseau GSM, le e-SECeF "
+            "fonctionne via internet. Il a ete lance en fevrier 2023."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 5, section II",
+        "verified": True,
+    },
+    {
+        "id": "calendrier-e-secef",
+        "keywords": ["calendrier e-secef", "dates deploiement e-secef", "quand e-secef obligatoire"],
+        "question_type": "Quel est le calendrier de deploiement progressif du e-SECeF ?",
+        "answer": (
+            "Le e-SECeF a ete deploye progressivement en 2023 : 1er "
+            "fevrier - contribuables au regime de l'impot synthetique et "
+            "PME sans SFE homologue, 1er avril - contribuables disposant "
+            "d'un SFE homologue ou auto-declare, 1er juin - prestataires "
+            "de services, 1er septembre - tous les contribuables sans "
+            "distinction."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 5, section III",
+        "verified": True,
+    },
+    {
+        "id": "conditions-inscription-e-secef",
+        "keywords": ["conditions e-secef", "s'inscrire au e-secef", "comment adherer e-secef"],
+        "question_type": "Quelles sont les conditions et la procedure d'inscription au e-SECeF ?",
+        "answer": (
+            "Pour utiliser le e-SECeF, il faut disposer d'un Numero "
+            "d'Identification Fiscale (NIF), d'une adresse email valide "
+            "et d'une connexion internet active, ainsi que d'un "
+            "smartphone, d'une tablette ou d'un ordinateur. L'inscription "
+            "peut se faire en ligne ou directement dans un service "
+            "operationnel de la DGI."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 5, sections III-IV",
+        "verified": True,
+    },
+    {
+        "id": "conservation-e-secef",
+        "keywords": ["conservation e-secef", "combien de temps garder facture e-secef", "format facture e-secef", "pdf a4"],
+        "question_type": "Combien de temps conserver les factures e-SECeF, et sous quel format ?",
+        "answer": (
+            "Les factures emises via le e-SECeF doivent etre conservees "
+            "pendant au moins dix (10) ans, fournies en format PDF avec "
+            "des dimensions A4 ou A8. C'est different du SECeF physique, "
+            "dont les factures papier thermique doivent rester lisibles "
+            "pendant au moins 4 ans - verifiez donc bien quelle version "
+            "vous utilisez."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 5, section V",
+        "verified": True,
+    },
+    {
+        "id": "reclassement-entreprises",
+        "keywords": ["reclassement entreprise", "changer de categorie entreprise", "micro petite moyenne grande"],
+        "question_type": "Comment le e-SECeF aide-t-il au reclassement des entreprises ?",
+        "answer": (
+            "Grace a la collecte de donnees fiscales fiables, le "
+            "e-SECeF permet de suivre l'evolution du chiffre d'affaires "
+            "d'une entreprise et de la reclasser automatiquement : de "
+            "micro a petite entreprise, de petite a moyenne, et de "
+            "moyenne a grande entreprise."
+        ),
+        "source": "Comprendre la Facture Certifiee (M. Abdoulaye), chap. 5, section VII",
         "verified": True,
     },
 ]
