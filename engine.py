@@ -102,6 +102,24 @@ MOTS_VIDES = {
     "faire", "fait", "etre", "dois", "doit", "peut", "peux", "comment",
 }
 
+# Mots PLAFONNES specifiques au domaine : dans un corpus qui ne parle QUE
+# de facture certifiee/SECeF, des mots comme "facture" ou "certifiee"
+# reviennent dans la quasi-totalite des questions, et n'ont donc quasiment
+# aucune valeur distinctive - meme si, par accident de redaction, ils
+# n'apparaissent comme keyword que dans 1 ou 2 entrees de cache_data.py
+# (ce qui leur donnerait sinon un poids IDF artificiellement eleve, cf.
+# le cas "phases-deploiement" qui raflait la mise sur toute question
+# contenant "facture"+"certifiee"). On NE LES EXCLUT PAS (l'entree
+# "definition-facture", qui definit precisement ce terme, a besoin de
+# pouvoir matcher dessus) : on plafonne simplement leur poids a une
+# valeur volontairement faible, qu'importe leur frequence reelle dans
+# cache_data.py.
+POIDS_PLAFONNE_DOMAINE = {
+    "facture": 0.3, "factures": 0.3,
+    "certifie": 0.3, "certifiee": 0.3, "certifies": 0.3, "certifiees": 0.3,
+    "non": 0.3,
+}
+
 # Reglages du moteur - centralises ici pour etre faciles a ajuster
 # une fois que tu auras des vrais logs de production.
 SEUIL_SCORE = 1.0        # score absolu minimal (inchange par rapport a la v2)
@@ -178,7 +196,10 @@ def _mot_potentiellement_matchable(mot_q):
 
 def _poids_mot(mot):
     """Poids inspire du TF-IDF : plus un mot est rare parmi les entrees,
-    plus il compte. Toujours strictement positif."""
+    plus il compte. Toujours strictement positif. Plafonne pour les
+    quelques mots generiques au domaine (voir POIDS_PLAFONNE_DOMAINE)."""
+    if mot in POIDS_PLAFONNE_DOMAINE:
+        return POIDS_PLAFONNE_DOMAINE[mot]
     freq = _FREQUENCE_MOTS.get(mot, 1)
     return math.log((_NB_ENTREES + 1) / freq) + 0.3
 
