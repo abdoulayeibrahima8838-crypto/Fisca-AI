@@ -8,22 +8,22 @@ Architecture "filet de securite" :
 2) Sinon (ou en cas d'echec), on bascule automatiquement et
    silencieusement sur le moteur local base sur mots-cles ci-dessous.
 
-MOTEUR LOCAL - v2 (corrige un bug de double-comptage) :
-La version precedente comparait chaque mot de la question a CHAQUE
-phrase-mot-cle d'une entree separement, et additionnait les points a
-chaque fois. Consequence : une entree avec plusieurs mots-cles contenant
-tous le mot "machine" (ex. "vendre ma machine", "revendre ma machine",
-"ceder ma machine") accumulait des points en double/triple pour ce seul
-mot, et pouvait l'emporter a tort face a une entree plus pertinente mais
-avec moins de repetitions.
+MOTEUR LOCAL - v3 (ajoute un seuil de couverture) :
+La v2 corrigeait le double-comptage (chaque mot de la question ne
+compte qu'une fois par entree, ponderation type TF-IDF).
 
-La v2 corrige ca : chaque mot de la question n'est compte QU'UNE SEULE
-FOIS par entree (on garde sa MEILLEURE correspondance dans le
-vocabulaire de l'entree, pas la somme de toutes ses correspondances).
-Elle ajoute aussi une ponderation inspiree du TF-IDF : les mots qui
-apparaissent dans presque toutes les entrees (ex. "facture", "certifie",
-"secef") comptent moins qu'un mot distinctif (ex. "panne", "revendre",
-"nif") qui n'apparait que dans une ou deux entrees.
+Mais la v2 avait un angle mort : le seuil final etait un score ABSOLU,
+jamais rapporte a la question. Consequence : une entree qui ne
+partageait que 2 mots tres communs (donc a faible poids chacun, mais
+dont la somme depassait quand meme le seuil) pouvait "gagner" alors que
+la moitie des mots de la question (souvent les plus specifiques, comme
+"tva" ou "impact") n'avaient AUCUNE correspondance dans son vocabulaire.
+
+La v3 ajoute une COUVERTURE PONDEREE : la part du poids total de la
+question qui a effectivement trouve une correspondance dans l'entree.
+On exige maintenant score >= seuil ET couverture >= seuil_couverture.
+Une entree qui ne repond qu'a une petite fraction "par hasard" de la
+question, meme avec un score cumule correct, est desormais rejetee.
 """
 import os
 import re
@@ -91,7 +91,7 @@ def repondre_ia(question_brute):
 
 
 # ---------------------------------------------------------------------------
-# Moteur local v2
+# Moteur local v3
 # ---------------------------------------------------------------------------
 MOTS_VIDES = {
     "le", "la", "les", "de", "des", "du", "un", "une", "est", "ce", "cette",
@@ -101,6 +101,13 @@ MOTS_VIDES = {
     "son", "sa", "ses", "si", "ne", "pas", "on", "se", "sont", "ai", "as",
     "faire", "fait", "etre", "dois", "doit", "peut", "peux", "comment",
 }
+
+# Reglages du moteur - centralises ici pour etre faciles a ajuster
+# une fois que tu auras des vrais logs de production.
+SEUIL_SCORE = 1.0        # score absolu minimal (inchange par rapport a la v2)
+SEUIL_COUVERTURE = 0.45  # part MINIMALE (ponderee) des mots de la question
+                          # qui doit etre retrouvee dans l'entree gagnante
+DEBUG_MOTEUR = os.environ.get("DEBUG_MOTEUR", "0") == "1"
 
 
 def normaliser(texte):
@@ -148,10 +155,24 @@ def _poids_mot(mot):
 
 def _score_entree(mots_question, entree):
     """Chaque mot de la question ne compte qu'UNE SEULE FOIS pour cette
-    entree (on garde sa meilleure correspondance, pas la somme)."""
+    entree (on garde sa meilleure correspondance, pas la somme).
+
+    Retourne (score, couverture) :
+    - score : somme ponderee des correspondances (comme avant)
+    - couverture : part du poids TOTAL de la question qui a trouve une
+      correspondance dans cette entree (0.0 a 1.0). C'est ce qui manquait
+      en v2 : un score correct obtenu en ne matchant qu'une petite partie
+      de la question (souvent les mots les moins specifiques) ne doit pas
+      suffire a "gagner".
+    """
     vocab = _VOCABULAIRES[entree["id"]]
     score = 0.0
+    poids_total = 0.0
+    poids_matche = 0.0
     for mot_q in mots_question:
+        p = _poids_mot(mot_q)
+        poids_total += p
+
         meilleure_ratio = 0.0
         for mot_v in vocab:
             if mot_q == mot_v:
@@ -162,9 +183,13 @@ def _score_entree(mots_question, entree):
                 ratio = 1.0 if mot_q == mot_v else 0.0
             if ratio > meilleure_ratio:
                 meilleure_ratio = ratio
+
         if meilleure_ratio >= 0.82:
-            score += meilleure_ratio * _poids_mot(mot_q)
-    return score
+            score += meilleure_ratio * p
+            poids_matche += meilleure_ratio * p
+
+    couverture = (poids_matche / poids_total) if poids_total > 0 else 0.0
+    return score, couverture
 
 
 def repondre_locale(question_brute):
@@ -172,24 +197,33 @@ def repondre_locale(question_brute):
     if not mots_question:
         mots_question = normaliser(question_brute).split()
 
-    meilleur = None
-    meilleur_score = 0.0
+    candidats = []
     for entree in QA_LIBRARY:
-        score = _score_entree(mots_question, entree)
-        if score > meilleur_score:
-            meilleur_score = score
-            meilleur = entree
+        score, couverture = _score_entree(mots_question, entree)
+        if score > 0:
+            candidats.append((score, couverture, entree))
 
-    # Seuil : au moins l'equivalent d'un mot assez distinctif bien matche.
-    if meilleur and meilleur_score >= 1.0:
-        return {
-            "niveau": 1,
-            "reponse": meilleur["answer"],
-            "source": meilleur["source"],
-            "verified": meilleur["verified"],
-            "question_comprise": meilleur["question_type"],
-            "moteur": "local",
-        }
+    candidats.sort(key=lambda c: c[0], reverse=True)
+
+    if DEBUG_MOTEUR and candidats:
+        print(f"[Fisca AI][debug] Question: {question_brute!r}")
+        for score, couverture, entree in candidats[:5]:
+            print(
+                f"    id={entree['id']!r} score={score:.2f} "
+                f"couverture={couverture:.0%} -> {entree['question_type']!r}"
+            )
+
+    if candidats:
+        meilleur_score, meilleure_couverture, meilleur = candidats[0]
+        if meilleur_score >= SEUIL_SCORE and meilleure_couverture >= SEUIL_COUVERTURE:
+            return {
+                "niveau": 1,
+                "reponse": meilleur["answer"],
+                "source": meilleur["source"],
+                "verified": meilleur["verified"],
+                "question_comprise": meilleur["question_type"],
+                "moteur": "local",
+            }
 
     return {
         "niveau": 3,
