@@ -52,7 +52,7 @@ QA_LIBRARY = [
     },
     {
         "id": "sanctions",
-        "keywords": ["sanction", "amende", "penalite", "consequence non delivrance", "combien"],
+        "keywords": ["sanction", "amende", "penalite", "consequence non delivrance"],
         "question_type": "Quelles sont les sanctions en cas de non-respect ?",
         "answer": (
             "Deux cas bien distincts. 1) Vous n'avez PAS de systeme electronique "
@@ -125,7 +125,7 @@ QA_LIBRARY = [
     },
     {
         "id": "mentions-obligatoires",
-        "keywords": ["mentions obligatoires", "que doit contenir", "information sur la facture", "quoi figurer"],
+        "keywords": ["mentions obligatoires", "que doit contenir", "information sur la facture", "quoi figurer", "quoi ecrit", "ecrit sur la facture", "doit contenir"],
         "question_type": "Quelles informations doivent figurer sur la facture certifiee ?",
         "answer": (
             "La date de facturation, un numero unique en sequence chronologique "
@@ -153,7 +153,7 @@ QA_LIBRARY = [
     },
     {
         "id": "seuil-forfaitaire",
-        "keywords": ["seuil forfaitaire", "chiffre d'affaires forfaitaire", "petit commercant", "regime forfait"],
+        "keywords": ["seuil forfaitaire", "chiffre d'affaires forfaitaire", "petit commercant", "regime forfait", "50 millions"],
         "question_type": "A partir de quel chiffre d'affaires est-on au regime forfaitaire ?",
         "answer": (
             "Le regime du forfait s'applique aux entreprises individuelles (hors "
@@ -282,6 +282,31 @@ QA_LIBRARY = [
             "aupres de la DGI, independamment de la machine physique."
         ),
         "source": "Art. 11 et 18 de l'Arrete 00473 du 20 novembre 2020 (commercialisation SECeF)",
+        "verified": True,
+    },
+    {
+        "id": "systemes-identiques",
+        "keywords": ["systemes identiques", "meme systeme", "differents dispositifs", "tous pareils"],
+        "question_type": "Les systemes de certification sont-ils tous identiques ?",
+        "answer": (
+            "Non. Plusieurs types de dispositifs homologues existent : "
+            "unites de facturation (UF), modules de controle de facturation "
+            "(MCF), et systemes de facturation d'entreprise (logiciels) "
+            "homologues separement."
+        ),
+        "source": "Art. 804 du CGI 2026 ; Arrete 00473 (definitions)",
+        "verified": True,
+    },
+    {
+        "id": "pourquoi",
+        "keywords": ["pourquoi", "objectif", "instauree", "raison", "but de la loi", "cette loi existe"],
+        "question_type": "Pourquoi la facture certifiee a-t-elle ete instauree ?",
+        "answer": (
+            "La facture certifiee vise a reduire la fraude sur la TVA, "
+            "accroitre les ressources de l'Etat, et renforcer l'egalite de "
+            "tous devant l'impot."
+        ),
+        "source": "Ministere des Finances / DGI (communication officielle sur la reforme)",
         "verified": True,
     },
 ]
