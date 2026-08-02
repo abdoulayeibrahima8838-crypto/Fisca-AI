@@ -95,11 +95,20 @@ def repondre_ia(question_brute):
 # ---------------------------------------------------------------------------
 MOTS_VIDES = {
     "le", "la", "les", "de", "des", "du", "un", "une", "est", "ce", "cette",
-    "que", "qui", "quel", "quelle", "quels", "quelles", "a", "et",
+    "que", "qui", "quel", "quelle", "quels", "quelles", "quoi", "a", "et",
     "en", "pour", "sur", "au", "aux", "par", "avec", "dans", "je", "tu",
     "il", "elle", "vous", "nous", "mon", "ma", "mes", "ton", "ta", "tes",
-    "son", "sa", "ses", "si", "ne", "pas", "on", "se", "sont", "ai", "as",
+    "son", "sa", "ses", "si", "ne", "on", "se", "sont", "ai", "as",
     "faire", "fait", "etre", "dois", "doit", "peut", "peux", "comment",
+    # NOTE v6 : "pas" a ete retire de cette liste (voir plus bas) - la
+    # negation est un signal fiscal essentiel ("je n'ai PAS de secef" vs
+    # "j'ai un secef" sont juridiquement opposes), et plusieurs entrees de
+    # cache_data.py comptaient deja dessus dans leurs keywords ("pas de
+    # machine", "pas de nif"...) sans que ca ait jamais eu d'effet tant
+    # que "pas" etait supprime avant meme d'arriver au matching. "quoi",
+    # a l'inverse, a ete AJOUTE ici : interrogatif generique ("c'est
+    # quoi...", "je risque quoi...") sans valeur distinctive, qui causait
+    # des collisions du meme type que "facture"/"certifiee".
 }
 
 # Mots PLAFONNES specifiques au domaine : dans un corpus qui ne parle QUE
@@ -118,7 +127,30 @@ POIDS_PLAFONNE_DOMAINE = {
     "facture": 0.3, "factures": 0.3,
     "certifie": 0.3, "certifiee": 0.3, "certifies": 0.3, "certifiees": 0.3,
     "non": 0.3,
+    # "pas" reste utile comme signal de negation, mais il est lui aussi
+    # tres frequent dans des keywords sans rapport entre eux ("pas de
+    # machine", "pas de nif", "pas de connexion", "il ne veut pas
+    # donner"...) : plafonne bas pour eviter les faux positifs. La vraie
+    # distinction "avec/sans systeme" repose sur le champ "expressions",
+    # pas sur le poids brut de ce seul mot.
+    "pas": 0.4,
+    # "loi" n'est keyword-liste QUE dans l'entree "pourquoi" ("but de la
+    # loi", "cette loi existe"), ce qui lui donne un poids IDF tres eleve
+    # (mot "rare" dans le corpus) alors que c'est un mot generique que
+    # n'importe quelle question fiscale peut naturellement contenir
+    # ("respecter la loi", "que dit la loi"...). Meme piege que
+    # "facture"/"certifiee".
+    "loi": 0.4,
 }
+
+# v6 : bonus attribue quand une expression complete de l'entree ("expressions"
+# dans cache_data.py) apparait telle quelle dans la question. Une expression
+# exacte ("remplacer la facture certifiee") est un signal bien plus fort et
+# fiable qu'une addition de mots isoles - elle merite un bonus consequent et
+# une couverture forcee au maximum, car elle prouve que la question porte
+# specifiquement sur cette entree, meme si les mots pris individuellement
+# sont trop generiques ou trop rares pour bien scorer seuls.
+POIDS_EXPRESSION_COMPLETE = 6.0
 
 # Reglages du moteur - centralises ici pour etre faciles a ajuster
 # une fois que tu auras des vrais logs de production.
@@ -187,9 +219,9 @@ def _mot_potentiellement_matchable(mot_q):
     doit compter dans le denominateur de la couverture."""
     if mot_q in _VOCAB_GLOBAL:
         return True
-    if len(mot_q) >= 4:
+    if len(mot_q) >= 5:
         for mot_v in _VOCAB_GLOBAL:
-            if len(mot_v) >= 4 and difflib.SequenceMatcher(None, mot_q, mot_v).ratio() >= 0.82:
+            if len(mot_v) >= 5 and difflib.SequenceMatcher(None, mot_q, mot_v).ratio() >= 0.82:
                 return True
     return False
 
@@ -204,17 +236,58 @@ def _poids_mot(mot):
     return math.log((_NB_ENTREES + 1) / freq) + 0.3
 
 
-def _score_entree(mots_question, entree):
+# v6 : negations metier (section 5 du cahier d'amelioration). Une simple
+# comparaison d'ensembles de mots ne suffit pas a detecter une negation -
+# "pas" et "secef" peuvent co-occurrer dans une question SANS exprimer
+# une absence ("j'ai un secef... mais... pas... facturer"). Ces regex
+# exigent une PROXIMITE CONTIGUE ("pas de secef", "sans machine") pour
+# n'allumer le concept que quand la negation porte reellement sur le mot
+# qui suit.
+NEGATIONS_METIER = {
+    r"\bpas de (secef|machine|systeme|dispositif)\b": "ABSENCE_SYSTEME",
+    r"\bsans (secef|machine|systeme)\b": "ABSENCE_SYSTEME",
+    r"\baucune? (secef|machine|systeme|dispositif|equipement)\b": "ABSENCE_SYSTEME",
+    r"\bne l utilise pas\b": "NON_UTILISATION_SYSTEME",
+    r"\bn utilise pas\b": "NON_UTILISATION_SYSTEME",
+    r"\bnon utilisee?\b": "NON_UTILISATION_SYSTEME",
+    r"\bne m en sers pas\b": "NON_UTILISATION_SYSTEME",
+    r"\bne facture pas avec\b": "NON_UTILISATION_SYSTEME",
+    r"\bne facture pas dessus\b": "NON_UTILISATION_SYSTEME",
+}
+
+
+def _detecter_concepts_negation(texte_normalise):
+    concepts = set()
+    for pattern, concept in NEGATIONS_METIER.items():
+        if re.search(pattern, texte_normalise):
+            concepts.add(concept)
+    return concepts
+
+
+def _bonus_expression(mots_question_set, entree):
+    """True si TOUS les mots significatifs d'au moins une expression de
+    l'entree (champ optionnel 'expressions' dans cache_data.py) sont
+    presents dans la question - independamment de l'ordre ou des mots de
+    liaison autour ("d'une", "l'", etc.). Plus robuste qu'une comparaison
+    de sous-chaine litterale face aux reformulations naturelles."""
+    for expression in entree.get("expressions", []):
+        mots_expression = set(_mots_significatifs(expression))
+        if mots_expression and mots_expression.issubset(mots_question_set):
+            return True
+    return False
+
+
+def _score_entree(mots_question, entree, mots_question_set=None, concepts_negation=None):
     """Chaque mot de la question ne compte qu'UNE SEULE FOIS pour cette
     entree (on garde sa meilleure correspondance, pas la somme).
 
     Retourne (score, couverture) :
-    - score : somme ponderee des correspondances (comme avant)
+    - score : somme ponderee des correspondances, plus le bonus
+      d'expression complete / de concept de negation le cas echeant ;
     - couverture : part du poids TOTAL de la question qui a trouve une
-      correspondance dans cette entree (0.0 a 1.0). C'est ce qui manquait
-      en v2 : un score correct obtenu en ne matchant qu'une petite partie
-      de la question (souvent les mots les moins specifiques) ne doit pas
-      suffire a "gagner".
+      correspondance dans cette entree (0.0 a 1.0), forcee a 1.0 si une
+      expression complete ou un concept de negation a matche (signal a
+      lui seul suffisamment fort).
     """
     vocab = _VOCABULAIRES[entree["id"]]
     score = 0.0
@@ -235,7 +308,7 @@ def _score_entree(mots_question, entree):
         for mot_v in vocab:
             if mot_q == mot_v:
                 ratio = 1.0
-            elif len(mot_q) >= 4 and len(mot_v) >= 4:
+            elif len(mot_q) >= 5 and len(mot_v) >= 5:
                 ratio = difflib.SequenceMatcher(None, mot_q, mot_v).ratio()
             else:
                 ratio = 1.0 if mot_q == mot_v else 0.0
@@ -247,33 +320,88 @@ def _score_entree(mots_question, entree):
             poids_matche += meilleure_ratio * p
 
     couverture = (poids_matche / poids_total) if poids_total > 0 else 0.0
-    return score, couverture
+    signal_fort = False
+
+    if mots_question_set and _bonus_expression(mots_question_set, entree):
+        score += POIDS_EXPRESSION_COMPLETE
+        couverture = 1.0
+        signal_fort = True
+
+    if concepts_negation and set(entree.get("concepts_negation", [])) & concepts_negation:
+        score += POIDS_EXPRESSION_COMPLETE
+        couverture = 1.0
+        signal_fort = True
+
+    return score, couverture, signal_fort
+
+
+
+
+
+# v6 : seuils de detection d'ambiguite (section 9 du cahier d'amelioration).
+# Si les deux meilleurs candidats sont trop proches, mieux vaut demander
+# une precision que de choisir arbitrairement - une mauvaise reponse
+# donnee avec assurance est pire qu'une question de clarification.
+MARGE_MINIMALE_ABSOLUE = 1.0
+RATIO_AMBIGUITE = 0.90
 
 
 def repondre_locale(question_brute):
     mots_question = _mots_significatifs(question_brute)
     if not mots_question:
         mots_question = normaliser(question_brute).split()
+    mots_question_set = set(mots_question)
+    concepts_negation = _detecter_concepts_negation(normaliser(question_brute))
 
     candidats = []
     for entree in QA_LIBRARY:
-        score, couverture = _score_entree(mots_question, entree)
+        score, couverture, signal_fort = _score_entree(mots_question, entree, mots_question_set, concepts_negation)
         if score > 0:
-            candidats.append((score, couverture, entree))
+            candidats.append((score, couverture, entree, signal_fort))
 
     candidats.sort(key=lambda c: c[0], reverse=True)
 
     if DEBUG_MOTEUR and candidats:
         print(f"[Fisca AI][debug] Question: {question_brute!r}")
-        for score, couverture, entree in candidats[:5]:
+        for score, couverture, entree, signal_fort in candidats[:5]:
+            marque = " [SIGNAL FORT]" if signal_fort else ""
             print(
                 f"    id={entree['id']!r} score={score:.2f} "
-                f"couverture={couverture:.0%} -> {entree['question_type']!r}"
+                f"couverture={couverture:.0%} -> {entree['question_type']!r}{marque}"
             )
 
     if candidats:
-        meilleur_score, meilleure_couverture, meilleur = candidats[0]
+        meilleur_score, meilleure_couverture, meilleur, meilleur_signal_fort = candidats[0]
         if meilleur_score >= SEUIL_SCORE and meilleure_couverture >= SEUIL_COUVERTURE:
+
+            # Le candidat #1 est valable individuellement - mais est-il
+            # NETTEMENT devant le #2, ou est-ce trop serre pour trancher
+            # sans risque ? On saute cette verification si le candidat #1
+            # a matche sur un signal fort (expression complete ou concept
+            # de negation) : ce signal est deliberement pose par un humain
+            # dans cache_data.py pour CETTE situation precise, il fait donc
+            # autorite meme si un autre candidat accumule un score proche
+            # par la simple coincidence de quelques mots generiques.
+            if not meilleur_signal_fort and len(candidats) >= 2:
+                deuxieme_score, deuxieme_couverture, deuxieme, _ = candidats[1]
+                if deuxieme_score >= SEUIL_SCORE:
+                    ecart = meilleur_score - deuxieme_score
+                    ratio = deuxieme_score / meilleur_score if meilleur_score > 0 else 0
+                    if ecart < MARGE_MINIMALE_ABSOLUE or ratio > RATIO_AMBIGUITE:
+                        return {
+                            "niveau": 2,
+                            "reponse": (
+                                "Votre question peut correspondre a plusieurs sujets. "
+                                "Pourriez-vous preciser laquelle vous interesse ?\n\n"
+                                f"1. {meilleur['question_type']}\n"
+                                f"2. {deuxieme['question_type']}"
+                            ),
+                            "source": None,
+                            "verified": None,
+                            "question_comprise": question_brute,
+                            "moteur": "local",
+                        }
+
             return {
                 "niveau": 1,
                 "reponse": meilleur["answer"],
