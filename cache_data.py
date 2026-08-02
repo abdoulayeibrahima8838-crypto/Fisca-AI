@@ -11,7 +11,7 @@ DOCUMENT_ACTIF = "Code General des Impots 2026 - Facture certifiee"
 QA_LIBRARY = [
     {
         "id": "qui-concerne",
-        "keywords": ["qui", "concerne", "concernee", "beneficiaire", "marche public", "tout le monde", "forfait", "forfaitaire"],
+        "keywords": ["qui", "concerne", "concernee", "beneficiaire", "marche public", "tout le monde", "forfait", "forfaitaire", "applique a moi", "oblige d'avoir", "obligatoire pour moi"],
         "question_type": "Qui est concerne par la facture certifiee ?",
         "answer": (
             "Toute personne physique ou morale soumise a l'impot sur les societes, "
@@ -26,7 +26,7 @@ QA_LIBRARY = [
     },
     {
         "id": "choix-systeme",
-        "keywords": ["quel systeme", "choisir", "systeme de certification", "secef choix", "homologue"],
+        "keywords": ["quel systeme", "choisir", "systeme de certification", "secef choix", "homologue", "quel type", "type prendre"],
         "question_type": "Quel systeme de certification choisir ?",
         "answer": (
             "Un systeme electronique certifie de facturation est une unite de "
@@ -73,7 +73,7 @@ QA_LIBRARY = [
     },
     {
         "id": "impact-tva",
-        "keywords": ["tva", "deduction tva", "consequence tva"],
+        "keywords": ["tva", "deduction tva", "consequence tva", "recuperer taxe", "recuperer tva"],
         "question_type": "Quel est l'impact sur la TVA si la facture n'est pas certifiee ?",
         "answer": (
             "La TVA sur un achat n'est deductible que si elle est mentionnee "
@@ -201,7 +201,7 @@ QA_LIBRARY = [
     },
     {
         "id": "pas-de-secef-vs-machine-inutilisee",
-        "keywords": ["pas de machine", "sans secef", "pas equipe", "je n'ai pas la machine", "pas de systeme", "pas de secef", "aucun systeme", "du tout"],
+        "keywords": ["pas de machine", "sans secef", "pas equipe", "je n'ai pas la machine", "pas de systeme", "pas de secef", "aucun systeme", "du tout", "zero equipement", "aucun equipement"],
         "question_type": "Que risque-t-on si on n'a pas du tout de systeme SECeF ?",
         "answer": (
             "Toute personne soumise a l'obligation qui vend des biens ou "
