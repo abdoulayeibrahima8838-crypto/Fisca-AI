@@ -309,6 +309,29 @@ QA_LIBRARY = [
         "source": "Ministere des Finances / DGI (communication officielle sur la reforme)",
         "verified": True,
     },
+    {
+        "id": "prix-machines-secef",
+        "keywords": ["prix", "coute", "combien coute", "cher", "tarif", "montant machine", "gratuit", "gratuite", "e-secef gratuit"],
+        "question_type": "Combien coute une machine ou un systeme SECeF ?",
+        "answer": (
+            "Ca depend du type de systeme choisi. Pour les machines "
+            "physiques (unites de facturation UF, modules de controle "
+            "MCF), l'arrete 00473 precise que les fournisseurs homologues "
+            "sont LIBRES de fixer leur prix eux-memes - il n'y a pas de "
+            "tarif legal impose. A titre purement indicatif (pas un prix "
+            "officiel), un responsable de la DGI a evoque plus de 300 000 "
+            "FCFA comme ordre de grandeur couramment pratique par les "
+            "fournisseurs lors d'une intervention televisee - le prix "
+            "reel varie donc d'un fournisseur a l'autre, et il vaut mieux "
+            "comparer plusieurs devis. Sinon, l'Etat a aussi introduit le "
+            "e-SECeF (version dematerialisee, accessible par smartphone, "
+            "tablette ou ordinateur connecte a internet) : celui-ci est "
+            "GRATUIT, specialement pense pour alleger les charges des "
+            "PME/TPE qui n'ont pas les moyens du materiel physique."
+        ),
+        "source": "Art. 21 et 23 de l'Arrete 00473 du 20 novembre 2020 (prix libre) ; Comprendre la Facture Certifiee (M. Abdoulaye), chap. 5 (avantages du e-SECeF, prix indicatif cite par la DGI)",
+        "verified": True,
+    },
 ]
 
 SUGGESTIONS = [
