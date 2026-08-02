@@ -31,9 +31,9 @@ from cache_data import QA_LIBRARY
 try:
     from openai import OpenAI
     _client = OpenAI() if os.environ.get("OPENAI_API_KEY") else None
-except Exception:
-    # Le paquet "openai" n'est pas installe, ou la cle est absente/invalide.
-    # Ce n'est jamais bloquant : on continue avec le moteur local.
+    print(f"[Fisca AI] Client OpenAI initialise : {_client is not None}")
+except Exception as e:
+    print(f"[Fisca AI] ECHEC initialisation client OpenAI : {type(e).__name__}: {e}")
     _client = None
 
 OPENAI_VECTOR_STORE_ID = os.environ.get("OPENAI_VECTOR_STORE_ID")
