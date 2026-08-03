@@ -2,11 +2,11 @@
 """
 Moteur de comprehension de Fisca AI.
 
-Architecture "filet de securite" :
-1) On tente d'abord une reponse via l'API OpenAI (si configuree et si
-   l'appel reussit).
-2) Sinon (ou en cas d'echec), on bascule automatiquement et
-   silencieusement sur le moteur local base sur mots-cles ci-dessous.
+Architecture "filet de securite" a 3 etages :
+1) Gemini File Search (PRIORITAIRE) - si configure et si l'appel reussit.
+2) OpenAI File Search (SECOURS) - si Gemini indisponible/en echec.
+3) Moteur local base sur mots-cles (DERNIER RECOURS) - toujours
+   disponible, aucune dependance externe.
 
 MOTEUR LOCAL - v3 (ajoute un seuil de couverture) :
 La v2 corrigeait le double-comptage (chaque mot de la question ne
@@ -34,19 +34,6 @@ from collections import Counter
 
 from cache_data import QA_LIBRARY
 
-# ---------------------------------------------------------------------------
-# Partie IA (OpenAI) - optionnelle, activee seulement si configuree
-# ---------------------------------------------------------------------------
-try:
-    from openai import OpenAI
-    _client = OpenAI() if os.environ.get("OPENAI_API_KEY") else None
-except Exception:
-    _client = None
-
-OPENAI_VECTOR_STORE_ID = os.environ.get("OPENAI_VECTOR_STORE_ID")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-OPENAI_TIMEOUT_SECONDS = 12
-
 SYSTEM_PROMPT = (
     "Tu es Fisca AI, assistant documentaire specialise dans la fiscalite "
     "nigerienne. Tu reponds UNIQUEMENT a partir des documents officiels "
@@ -59,6 +46,73 @@ SYSTEM_PROMPT = (
     "Reponds en francais, simplement, pour un contribuable qui n'est pas "
     "juriste."
 )
+
+# ---------------------------------------------------------------------------
+# Partie IA n°1 - Gemini (PRIORITAIRE) - optionnelle, activee seulement si
+# configuree. Utilise le File Search Store cree via Colab.
+# ---------------------------------------------------------------------------
+try:
+    from google import genai
+    from google.genai import types as genai_types
+    _gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"]) if os.environ.get("GEMINI_API_KEY") else None
+except Exception:
+    _gemini_client = None
+    genai_types = None
+
+GEMINI_FILE_SEARCH_STORE = os.environ.get("GEMINI_FILE_SEARCH_STORE")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_TIMEOUT_SECONDS = 12
+
+
+def repondre_gemini(question_brute):
+    """Tente une reponse via Gemini File Search. Retourne None si
+    indisponible pour une raison quelconque - l'appelant bascule alors
+    sur OpenAI, puis sur le moteur local."""
+    if not _gemini_client or not GEMINI_FILE_SEARCH_STORE:
+        return None
+    try:
+        response = _gemini_client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=question_brute,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                tools=[
+                    genai_types.Tool(
+                        file_search=genai_types.FileSearch(
+                            file_search_store_names=[GEMINI_FILE_SEARCH_STORE]
+                        )
+                    )
+                ],
+            ),
+        )
+        texte = getattr(response, "text", "") or ""
+        if not texte.strip():
+            return None
+        return {
+            "niveau": 1,
+            "reponse": texte.strip(),
+            "source": "Reponse generee par l'IA (Gemini) a partir des documents officiels charges",
+            "verified": None,
+            "question_comprise": question_brute,
+            "moteur": "gemini",
+        }
+    except Exception as e:
+        print(f"[Fisca AI] Echec de l'appel Gemini ({type(e).__name__}: {e}) - bascule sur OpenAI.")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Partie IA n°2 - OpenAI (SECOURS si Gemini indisponible/en echec)
+# ---------------------------------------------------------------------------
+try:
+    from openai import OpenAI
+    _client = OpenAI() if os.environ.get("OPENAI_API_KEY") else None
+except Exception:
+    _client = None
+
+OPENAI_VECTOR_STORE_ID = os.environ.get("OPENAI_VECTOR_STORE_ID")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+OPENAI_TIMEOUT_SECONDS = 12
 
 
 def repondre_ia(question_brute):
@@ -80,7 +134,7 @@ def repondre_ia(question_brute):
         return {
             "niveau": 1,
             "reponse": texte.strip(),
-            "source": "Reponse generee par l'IA a partir des documents officiels charges",
+            "source": "Reponse generee par l'IA (OpenAI) a partir des documents officiels charges",
             "verified": None,
             "question_comprise": question_brute,
             "moteur": "openai",
@@ -335,9 +389,6 @@ def _score_entree(mots_question, entree, mots_question_set=None, concepts_negati
     return score, couverture, signal_fort
 
 
-
-
-
 # v6 : seuils de detection d'ambiguite (section 9 du cahier d'amelioration).
 # Si les deux meilleurs candidats sont trop proches, mieux vaut demander
 # une precision que de choisir arbitrairement - une mauvaise reponse
@@ -426,7 +477,14 @@ def repondre_locale(question_brute):
 
 
 def repondre(question_brute):
-    resultat_ia = repondre_ia(question_brute)
-    if resultat_ia is not None:
-        return resultat_ia
+    """Ordre de priorite : Gemini (File Search) -> OpenAI (File Search)
+    -> moteur local. Chaque etage n'est tente que si le precedent est
+    indisponible ou echoue - jamais d'erreur bloquante pour
+    l'utilisateur, quel que soit le nombre d'IA configurees ou non."""
+    resultat = repondre_gemini(question_brute)
+    if resultat is not None:
+        return resultat
+    resultat = repondre_ia(question_brute)
+    if resultat is not None:
+        return resultat
     return repondre_locale(question_brute)
