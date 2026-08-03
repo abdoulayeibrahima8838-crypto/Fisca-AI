@@ -54,7 +54,7 @@ QA_LIBRARY = [
     {
         "id": "sanctions",
         "keywords": ["sanction", "amende", "penalite", "consequence non delivrance"],
-        "concepts_negation": ["NON_UTILISATION_SYSTEME"],
+        "expressions": ["j ai un secef mais je ne l utilise pas", "je ne l utilise pas pour facturer", "machine non utilisee pour facturer", "je ne m en sers pas pour facturer", "possede le secef mais ne facture pas avec", "je ne m en sers pas"],
         "question_type": "Quelles sont les sanctions en cas de non-respect ?",
         "answer": (
             "Deux cas bien distincts. 1) Vous n'avez PAS de systeme electronique "
@@ -218,7 +218,7 @@ QA_LIBRARY = [
     {
         "id": "pas-de-secef-vs-machine-inutilisee",
         "keywords": ["pas de machine", "sans secef", "pas equipe", "je n'ai pas la machine", "pas de systeme", "pas de secef", "aucun systeme", "du tout", "zero equipement", "aucun equipement"],
-        "concepts_negation": ["ABSENCE_SYSTEME"],
+        "expressions": ["je n ai pas de secef je risque quoi", "aucune machine secef du tout", "pas du tout de systeme secef", "aucun systeme electronique de facturation"],
         "question_type": "Que risque-t-on si on n'a pas du tout de systeme SECeF ?",
         "answer": (
             "Toute personne soumise a l'obligation qui vend des biens ou "
@@ -354,7 +354,7 @@ QA_LIBRARY = [
     {
         "id": "definition-facture",
         "keywords": ["c'est quoi une facture", "definition facture", "qu'est ce qu'une facture", "signification facture"],
-        "expressions": ["definition juridique facture", "sens juridique de la facture", "qu est ce qu une facture juridiquement", "definition legale facture", "au sens juridique"],
+        "expressions": ["definition juridique facture", "sens juridique de la facture", "qu est ce qu une facture juridiquement", "definition legale facture", "au sens juridique", "legalement une facture"],
         "question_type": "Qu'est-ce qu'une facture, au sens juridique ?",
         "answer": (
             "Une facture est un document commercial qui atteste d'une "
