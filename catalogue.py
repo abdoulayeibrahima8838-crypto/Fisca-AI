@@ -32,6 +32,7 @@ CATALOGUE = [
         "prix_original_fcfa": 15000,
         "couverture_emoji": "📘",
         "couverture_couleur": "#E07A3F",
+        "couverture_image": "/images/couverture_livre_3d.png",
         "disponible_a_la_vente": True,
     },
     {
