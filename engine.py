@@ -60,7 +60,7 @@ except Exception:
     genai_types = None
 
 GEMINI_FILE_SEARCH_STORE = os.environ.get("GEMINI_FILE_SEARCH_STORE")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_TIMEOUT_SECONDS = 12
 
 
