@@ -104,7 +104,7 @@ def repondre_gemini(question_brute):
             contents=question_brute,
             config=genai_types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
-                max_output_tokens=700,
+                max_output_tokens=2048,
                 tools=[
                     genai_types.Tool(
                         file_search=genai_types.FileSearch(
@@ -155,7 +155,7 @@ def repondre_ia(question_brute):
                 {"role": "user", "content": question_brute},
             ],
             tools=[{"type": "file_search", "vector_store_ids": [OPENAI_VECTOR_STORE_ID], "max_num_results": 4}],
-            max_output_tokens=700,
+            max_output_tokens=2048,
             timeout=OPENAI_TIMEOUT_SECONDS,
         )
         texte = getattr(response, "output_text", "") or ""
