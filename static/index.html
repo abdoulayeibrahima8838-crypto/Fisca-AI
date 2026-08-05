@@ -19,7 +19,6 @@
   .app{display:flex; flex-direction:column; height:100vh; max-width:480px; margin:0 auto; background: var(--paper); position:relative; box-shadow: 0 0 60px rgba(0,0,0,0.4);}
   @supports (height: 100dvh){ .app{height:100dvh;} }
 
-  /* ===== HEADER ===== */
   .header{background: var(--marine); color: var(--cream); padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom: 1px solid var(--marine-line);}
   .header-left{display:flex; align-items:center; gap:12px; min-width:0; flex-shrink:1;}
   .logo-mark{width:32px; height:32px; border-radius:7px; background:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:3px; box-shadow:0 1px 3px rgba(0,0,0,0.15);}
@@ -29,7 +28,6 @@
   .version-pill{background: rgba(201,162,75,0.14); border:1px solid rgba(201,162,75,0.4); color: var(--or); font-size:11px; font-weight:600; letter-spacing:0.4px; padding:4px 12px; border-radius:20px; text-transform:uppercase; white-space:nowrap; flex-shrink:0;}
   .logout-btn{background:none; border:none; color:var(--cream); opacity:0.7; cursor:pointer; font-size:12px; text-decoration:underline; flex-shrink:0;}
 
-  /* ===== MENU HAMBURGER + TIROIR ===== */
   .menu-btn{background:none; border:none; color:var(--cream); cursor:pointer; padding:4px; display:flex; align-items:center; opacity:0.9; flex-shrink:0;}
   .drawer-overlay{position:absolute; inset:0; background:rgba(0,0,0,0.4); z-index:40; display:none;}
   .drawer-overlay.open{display:block;}
@@ -41,7 +39,6 @@
   .drawer-item:hover{background:rgba(255,255,255,0.06);}
   .drawer-item .icon{width:20px; text-align:center; opacity:0.85;}
 
-  /* ===== ECRANS SECONDAIRES (historique / profil / bibliotheque) ===== */
   .sub-screen{display:none; flex-direction:column; position:absolute; inset:0; z-index:30; background:var(--paper);}
   .sub-screen.open{display:flex;}
   .sub-header{display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid #E5DCC7; background:var(--paper);}
@@ -64,7 +61,6 @@
   .lib-card .lib-statut{font-size:11px; font-weight:600; color:var(--vert);}
   .lib-card .lib-statut::before{content:"● "; }
 
-  /* ===== NOUVEAU CATALOGUE (livres/formations/documents/abonnements) ===== */
   .lib-tabs{display:flex; gap:6px; padding:0 0 14px; overflow-x:auto;}
   .lib-tab{flex-shrink:0; padding:7px 14px; border-radius:20px; border:1px solid #E5DCC7; background:#fff; color:var(--marine); font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;}
   .lib-tab.active{background:var(--marine); color:#fff; border-color:var(--marine);}
@@ -101,6 +97,26 @@
   .plan-btn.actif{background:var(--marine); color:#fff;}
   .plan-btn.inactif{background:#EFE9DB; color:#8A8071; cursor:not-allowed;}
 
+  /* ===== CALENDRIER FISCAL ===== */
+  .cal-tabs{display:flex; gap:6px; padding:0 0 14px; overflow-x:auto;}
+  .cal-tab{flex-shrink:0; padding:7px 13px; border-radius:20px; border:1px solid #E5DCC7; background:#fff; color:var(--marine); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;}
+  .cal-tab.active{background:var(--marine); color:#fff; border-color:var(--marine);}
+  .cal-panel{display:none;}
+  .cal-panel.active{display:block;}
+  .cal-item{display:flex; gap:10px; background:#fff; border:1px solid #E5DCC7; border-radius:11px; padding:11px 13px; margin-bottom:8px;}
+  .cal-day{flex-shrink:0; width:30px; height:30px; border-radius:8px; background:var(--or); color:#fff; font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center;}
+  .cal-info .cal-libelle{font-size:13px; font-weight:600; color:var(--marine); line-height:1.3; margin-bottom:4px;}
+  .cal-info .cal-meta{display:flex; flex-wrap:wrap; gap:5px;}
+  .cal-tag{font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; background:rgba(201,162,75,0.15); color:#8A6415;}
+  .cal-tag.article{background:rgba(14,42,58,0.08); color:var(--marine);}
+  .cal-empty{text-align:center; color:#8A8071; font-size:12.5px; padding:20px;}
+  .cal-section-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#8A8071; margin:20px 0 8px;}
+  .cal-section-title:first-child{margin-top:0;}
+  .cal-event-card{background:#fff; border:1px solid #E5DCC7; border-left:3px solid var(--or); border-radius:10px; padding:11px 13px; margin-bottom:8px;}
+  .cal-event-trigger{font-size:10px; text-transform:uppercase; letter-spacing:0.3px; color:#8A6415; font-weight:700; margin-bottom:4px;}
+  .cal-event-libelle{font-size:13px; font-weight:600; color:var(--marine); margin-bottom:6px;}
+  .cal-event-delai{font-size:10.5px; font-weight:600; color:var(--vert); background:rgba(62,125,90,0.1); padding:2px 8px; border-radius:20px; display:inline-block;}
+
   .profil-field{margin-bottom:16px;}
   .profil-field label{display:block; font-size:12px; font-weight:600; color:var(--marine); margin-bottom:5px;}
   .profil-field .value{font-size:14px; color:#3a3a3a; padding:11px 13px; background:#fff; border:1px solid #E5DCC7; border-radius:10px;}
@@ -112,12 +128,10 @@
   .profil-msg.ok{display:block; background:rgba(62,125,90,0.1); color:var(--vert);}
   .profil-msg.err{display:block; background:#FBEAE6; color:#B0432B;}
 
-  /* ===== SOURCE BAR ===== */
   .source-bar{background: var(--marine-deep); color: var(--cream); padding:9px 16px; display:flex; align-items:center; gap:8px; font-size:12.5px; border-bottom:1px solid var(--marine-line);}
   .source-bar .source-label{opacity:0.6; font-weight:500;}
   .source-bar .source-name{font-weight:600;}
 
-  /* ===== AUTH SCREEN ===== */
   .auth-screen{flex:1; display:flex; flex-direction:column; justify-content:center; padding:28px 24px; overflow-y:auto;}
   .auth-mark{width:64px; height:64px; border-radius:16px; margin:0 auto 18px; background:#fff; display:flex; align-items:center; justify-content:center; padding:8px; box-shadow:0 2px 8px rgba(14,42,58,0.15);}
   .auth-mark img{width:100%; height:100%; object-fit:contain;}
@@ -132,7 +146,6 @@
   .auth-switch a{color:var(--orange); font-weight:600; cursor:pointer; text-decoration:none;}
   .auth-error{background:#FBEAE6; color:#B0432B; border:1px solid #F0C7BB; padding:9px 12px; border-radius:8px; font-size:12.5px; margin-bottom:14px; display:none;}
 
-  /* ===== CHAT ===== */
   .chat{flex:1; overflow-y:auto; padding:20px 16px 12px; display:flex; flex-direction:column; gap:16px; background: radial-gradient(circle at 15% 8%, rgba(201,162,75,0.05), transparent 45%), var(--paper);}
   .welcome{text-align:center; padding:24px 12px 8px;}
   .welcome-mark{width:60px; height:60px; border-radius:14px; margin:0 auto 16px; background:#fff; display:flex; align-items:center; justify-content:center; padding:7px; box-shadow:0 2px 8px rgba(14,42,58,0.15);}
@@ -265,6 +278,7 @@
     </div>
     <button class="drawer-item" id="menuHistorique"><span class="icon">🕘</span> Historique</button>
     <button class="drawer-item" id="menuBibliotheque"><span class="icon">📚</span> Bibliothèque</button>
+    <button class="drawer-item" id="menuCalendrier"><span class="icon">📅</span> Calendrier fiscal</button>
     <button class="drawer-item" id="menuProfil"><span class="icon">👤</span> Mon profil</button>
     <button class="drawer-item" id="menuDeconnexion"><span class="icon">🚪</span> Déconnexion</button>
   </div>
@@ -285,6 +299,15 @@
       <h2>Bibliothèque</h2>
     </div>
     <div class="sub-body" id="libraryBody"></div>
+  </div>
+
+  <!-- ===== ECRAN CALENDRIER FISCAL ===== -->
+  <div class="sub-screen" id="calendarScreen">
+    <div class="sub-header">
+      <button id="calendarBack">←</button>
+      <h2>Calendrier fiscal</h2>
+    </div>
+    <div class="sub-body" id="calendarBody"></div>
   </div>
 
   <!-- ===== ECRAN PROFIL ===== -->
@@ -652,6 +675,76 @@
   document.getElementById('libraryBack').addEventListener('click', ()=> libraryScreen.classList.remove('open'));
 
 
+  // ===== ECRAN CALENDRIER FISCAL =====
+  const calendarScreen = document.getElementById('calendarScreen');
+  const calendarBody = document.getElementById('calendarBody');
+  let calendrierCache = null;
+
+  function renduEcheance(e){
+    return '<div class="cal-item">'
+      + '<div class="cal-day">' + e.jour + '</div>'
+      + '<div class="cal-info">'
+      + '<div class="cal-libelle">' + escapeHtml(e.libelle) + '</div>'
+      + '<div class="cal-meta">'
+      + '<span class="cal-tag">' + escapeHtml(e.impot) + '</span>'
+      + '<span class="cal-tag article">' + escapeHtml(e.article) + '</span>'
+      + '</div></div></div>';
+  }
+
+  function renduMois(numMois, data){
+    if(!data.echeances || data.echeances.length === 0){
+      return '<div class="cal-empty">Aucune échéance particulière ce mois-ci.</div>';
+    }
+    return data.echeances.map(renduEcheance).join('');
+  }
+
+  function renduEvenement(d){
+    return '<div class="cal-event-card">'
+      + '<div class="cal-event-trigger">' + escapeHtml(d.evenement) + '</div>'
+      + '<div class="cal-event-libelle">' + escapeHtml(d.libelle) + '</div>'
+      + '<div class="cal-meta" style="margin-bottom:6px;"><span class="cal-tag article">' + escapeHtml(d.article) + '</span></div>'
+      + '<span class="cal-event-delai">Délai : ' + escapeHtml(d.delai) + '</span>'
+      + '</div>';
+  }
+
+  function switchCalTab(numMois){
+    document.querySelectorAll('.cal-tab').forEach(t => t.classList.toggle('active', t.dataset.mois === String(numMois)));
+    document.querySelectorAll('.cal-panel').forEach(p => p.classList.toggle('active', p.id === 'calPanel' + numMois));
+  }
+
+  document.getElementById('menuCalendrier').addEventListener('click', async ()=>{
+    closeDrawer();
+    calendarScreen.classList.add('open');
+    calendarBody.innerHTML = '<div class="cal-empty">Chargement…</div>';
+    try{
+      if(!calendrierCache){
+        const res = await fetch('/api/calendrier-fiscal');
+        calendrierCache = await res.json();
+      }
+      const data = calendrierCache;
+      const moisActuel = new Date().getMonth() + 1;
+
+      let tabsHtml = '<div class="cal-tabs">';
+      for(let m = 1; m <= 12; m++){
+        tabsHtml += '<button class="cal-tab' + (m === moisActuel ? ' active' : '') + '" data-mois="' + m + '">' + data.mois_labels[m].slice(0,3) + '</button>';
+      }
+      tabsHtml += '</div>';
+
+      let panelsHtml = '';
+      for(let m = 1; m <= 12; m++){
+        panelsHtml += '<div class="cal-panel' + (m === moisActuel ? ' active' : '') + '" id="calPanel' + m + '">' + renduMois(m, data.calendrier[m]) + '</div>';
+      }
+
+      let eventsHtml = '<div class="cal-section-title">Délais liés à un événement</div>' + data.delais_evenements.map(renduEvenement).join('');
+
+      calendarBody.innerHTML = tabsHtml + '<div id="calPanels">' + panelsHtml + '</div>' + eventsHtml;
+      document.querySelectorAll('.cal-tab').forEach(t => t.addEventListener('click', ()=> switchCalTab(t.dataset.mois)));
+    } catch(e){
+      calendarBody.innerHTML = '<div class="cal-empty">Impossible de charger le calendrier fiscal.</div>';
+    }
+  });
+  document.getElementById('calendarBack').addEventListener('click', ()=> calendarScreen.classList.remove('open'));
+
   // ===== ECRAN PROFIL =====
   const profileScreen = document.getElementById('profileScreen');
   const profileBody = document.getElementById('profileBody');
@@ -724,3 +817,4 @@
 
 </body>
 </html>
+
