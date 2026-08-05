@@ -20,14 +20,11 @@ from cache_data import DOCUMENT_ACTIF, SUGGESTIONS
 from catalogue import CATALOGUE, DOCUMENTS_TELECHARGEABLES, ABONNEMENTS, lien_whatsapp_commande
 from payments import initier_paiement
 from engine import repondre
+from calendrier_fiscal_data import get_calendrier_par_mois, DELAIS_EVENEMENTS, MOIS_LABELS
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 QUOTA_GRATUIT_PAR_JOUR = 5
 
-# Comptes qui n'ont pas de limite quotidienne (pour tes propres tests).
-# Sur Render, ajoute la variable COMPTES_ILLIMITES avec ton contact
-# (le meme que celui utilise pour te connecter), ex: "90000000" ou
-# plusieurs separes par des virgules : "90000000,tonemail@exemple.com"
 COMPTES_ILLIMITES = {
     c.strip().lower()
     for c in os.environ.get("COMPTES_ILLIMITES", "").split(",")
@@ -40,17 +37,12 @@ def est_illimite(user):
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    # Certains fournisseurs donnent l'ancien prefixe ; psycopg2 accepte
-    # les deux, mais on normalise pour eviter toute surprise.
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.secret_key = os.environ.get("FISCA_AI_SECRET", secrets.token_hex(32))
 
 
-# ---------------------------------------------------------------------------
-# Base de donnees (PostgreSQL)
-# ---------------------------------------------------------------------------
 def get_db():
     if "db" not in g:
         if not DATABASE_URL:
@@ -135,16 +127,10 @@ def init_db():
     print("Base PostgreSQL initialisee (tables verifiees/creees).")
 
 
-# ---------------------------------------------------------------------------
-# Mots de passe (hachage avec sel, sans dependance externe)
-# ---------------------------------------------------------------------------
 def hacher_mot_de_passe(mot_de_passe, sel):
     return hashlib.pbkdf2_hmac("sha256", mot_de_passe.encode("utf-8"), sel.encode("utf-8"), 100_000).hex()
 
 
-# ---------------------------------------------------------------------------
-# Aides
-# ---------------------------------------------------------------------------
 def utilisateur_courant():
     user_id = session.get("user_id")
     if not user_id:
@@ -165,9 +151,6 @@ def questions_posees_aujourdhui(user_id):
     return cur.fetchone()["n"]
 
 
-# ---------------------------------------------------------------------------
-# Routes API
-# ---------------------------------------------------------------------------
 @app.route("/api/inscription", methods=["POST"])
 def inscription():
     data = request.get_json(silent=True) or {}
@@ -312,9 +295,6 @@ def deposer_retour():
     return jsonify({"ok": True})
 
 
-# ---------------------------------------------------------------------------
-# Frontend statique
-# ---------------------------------------------------------------------------
 DOCUMENTS_BIBLIOTHEQUE = [
     {
         "id": "cgi2026",
@@ -354,6 +334,23 @@ DOCUMENTS_BIBLIOTHEQUE = [
 @app.route("/api/bibliotheque", methods=["GET"])
 def bibliotheque():
     return jsonify({"documents": DOCUMENTS_BIBLIOTHEQUE})
+
+
+@app.route("/api/calendrier-fiscal", methods=["GET"])
+def calendrier_fiscal():
+    """Calendrier des echeances fiscales (CGI 2026), organise par mois +
+    delais lies a un evenement. Route publique (pas besoin d'etre
+    connecte), comme /api/bibliotheque."""
+    calendrier = get_calendrier_par_mois()
+    calendrier_json = {
+        str(m): {"label": data["label"], "echeances": data["echeances"]}
+        for m, data in calendrier.items()
+    }
+    return jsonify({
+        "calendrier": calendrier_json,
+        "delais_evenements": DELAIS_EVENEMENTS,
+        "mois_labels": {str(k): v for k, v in MOIS_LABELS.items()},
+    })
 
 
 @app.route("/api/historique", methods=["GET"])
@@ -498,7 +495,6 @@ def initier_le_paiement():
         db.commit()
         return jsonify({"ok": True, "mode": "en_ligne", "lien_paiement": resultat["lien_paiement"]})
 
-    # Repli automatique : circuit manuel via WhatsApp (deja fonctionnel)
     lien = lien_whatsapp_commande(description, user["nom"])
     return jsonify({"ok": True, "mode": "whatsapp", "lien_paiement": lien})
 
@@ -507,12 +503,7 @@ def initier_le_paiement():
 def webhook_paiement(fournisseur):
     """Emplacement reserve pour recevoir les confirmations de paiement
     de MyNITA/iMoney. NON ACTIF tant que ces fournisseurs ne sont pas
-    branches : a completer avec la verification de signature et le
-    format exacts fournis par chaque prestataire."""
-    # --- A COMPLETER lors du branchement reel du fournisseur ---
-    # data = request.get_json(silent=True) or {}
-    # verifier la signature/authenticite selon la doc du fournisseur
-    # retrouver le paiement via reference_externe, passer statut='paye', paye_le=datetime.now()
+    branches."""
     return jsonify({"recu": True, "note": "Webhook non actif - fournisseur non encore integre"}), 200
 
 
@@ -671,3 +662,4 @@ if __name__ == "__main__":
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
