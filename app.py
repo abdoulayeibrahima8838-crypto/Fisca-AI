@@ -8,8 +8,10 @@ service (onglet Environment). Sans elle, le serveur refuse de demarrer
 et l'affiche clairement dans les logs.
 """
 import hashlib
+import hmac
 import os
 import secrets
+import time
 from datetime import date, datetime
 
 import psycopg2
@@ -24,6 +26,7 @@ from calendrier_fiscal_data import get_calendrier_par_mois, DELAIS_EVENEMENTS, M
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 QUOTA_GRATUIT_PAR_JOUR = 5
+MOT_DE_PASSE_LONGUEUR_MIN = 8
 
 COMPTES_ILLIMITES = {
     c.strip().lower()
@@ -41,6 +44,35 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.secret_key = os.environ.get("FISCA_AI_SECRET", secrets.token_hex(32))
+
+
+# ---------------------------------------------------------------------------
+# Protection contre les essais repetes de mot de passe (brute force).
+# Stockage en memoire - suffisant en phase test (un seul worker Render,
+# voir WEB_CONCURRENCY=1 dans les logs). Si un jour plusieurs workers
+# tournent en parallele, il faudra deplacer ce compteur en base de
+# donnees ou vers un service comme Redis pour qu'il reste partage entre
+# eux.
+# ---------------------------------------------------------------------------
+MAX_TENTATIVES_CONNEXION = 5
+DUREE_BLOCAGE_SECONDES = 15 * 60  # 15 minutes
+_tentatives_echouees = {}  # contact -> [timestamps des echecs recents]
+
+
+def _connexion_bloquee(contact):
+    maintenant = time.time()
+    historique = _tentatives_echouees.get(contact, [])
+    historique = [t for t in historique if maintenant - t < DUREE_BLOCAGE_SECONDES]
+    _tentatives_echouees[contact] = historique
+    return len(historique) >= MAX_TENTATIVES_CONNEXION
+
+
+def _enregistrer_echec_connexion(contact):
+    _tentatives_echouees.setdefault(contact, []).append(time.time())
+
+
+def _reinitialiser_tentatives(contact):
+    _tentatives_echouees.pop(contact, None)
 
 
 def get_db():
@@ -158,8 +190,8 @@ def inscription():
     contact = (data.get("contact") or "").strip().lower()
     mot_de_passe = data.get("mot_de_passe") or ""
 
-    if not nom or not contact or len(mot_de_passe) < 4:
-        return jsonify({"erreur": "Nom, contact et mot de passe (4 caracteres minimum) sont requis."}), 400
+    if not nom or not contact or len(mot_de_passe) < MOT_DE_PASSE_LONGUEUR_MIN:
+        return jsonify({"erreur": f"Nom, contact et mot de passe ({MOT_DE_PASSE_LONGUEUR_MIN} caracteres minimum) sont requis."}), 400
 
     db = get_db()
     cur = db.cursor()
@@ -185,13 +217,20 @@ def connexion():
     contact = (data.get("contact") or "").strip().lower()
     mot_de_passe = data.get("mot_de_passe") or ""
 
+    if _connexion_bloquee(contact):
+        return jsonify({
+            "erreur": "Trop de tentatives incorrectes. Reessayez dans 15 minutes, ou reinitialisez votre mot de passe."
+        }), 429
+
     db = get_db()
     cur = db.cursor()
     cur.execute("SELECT * FROM users WHERE contact = %s", (contact,))
     user = cur.fetchone()
     if not user or hacher_mot_de_passe(mot_de_passe, user["sel"]) != user["mot_de_passe_hash"]:
+        _enregistrer_echec_connexion(contact)
         return jsonify({"erreur": "Contact ou mot de passe incorrect."}), 401
 
+    _reinitialiser_tentatives(contact)
     session["user_id"] = user["id"]
     return jsonify({"ok": True, "nom": user["nom"]})
 
@@ -443,8 +482,8 @@ def changer_mot_de_passe():
 
     if hacher_mot_de_passe(ancien, user["sel"]) != user["mot_de_passe_hash"]:
         return jsonify({"erreur": "Ancien mot de passe incorrect."}), 401
-    if len(nouveau) < 4:
-        return jsonify({"erreur": "Le nouveau mot de passe doit faire au moins 4 caracteres."}), 400
+    if len(nouveau) < MOT_DE_PASSE_LONGUEUR_MIN:
+        return jsonify({"erreur": f"Le nouveau mot de passe doit faire au moins {MOT_DE_PASSE_LONGUEUR_MIN} caracteres."}), 400
 
     db = get_db()
     cur = db.cursor()
@@ -560,18 +599,36 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
-@app.route("/admin")
-def admin():
-    """Page de consultation simple, protegee par mot de passe (ADMIN_PASSWORD).
-    Usage : https://ton-site.onrender.com/admin?motdepasse=xxxxx
-    """
+def _acces_admin_valide():
+    """Verifie l'authentification HTTP Basic pour la page /admin.
+    Comparaison a temps constant (hmac.compare_digest) pour eviter une
+    attaque par mesure de temps."""
     mot_de_passe_attendu = os.environ.get("ADMIN_PASSWORD")
     if not mot_de_passe_attendu:
-        return "ADMIN_PASSWORD n'est pas configure. Ajoute cette variable d'environnement sur Render pour activer cette page.", 503
+        return False, "ADMIN_PASSWORD n'est pas configure. Ajoute cette variable d'environnement sur Render pour activer cette page."
+    auth = request.authorization
+    if not auth or not hmac.compare_digest(auth.password or "", mot_de_passe_attendu):
+        return False, None
+    return True, None
 
-    fourni = request.args.get("motdepasse", "")
-    if fourni != mot_de_passe_attendu:
-        return "Mot de passe manquant ou incorrect. Utilise : /admin?motdepasse=TON_MOT_DE_PASSE", 401
+
+@app.route("/admin")
+def admin():
+    """Page de consultation simple, protegee par identifiants HTTP Basic
+    (le mot de passe ne transite donc plus jamais dans l'URL, ni dans
+    l'historique du navigateur ou les journaux serveur).
+    Usage : ouvrir /admin, le navigateur demande un identifiant/mot de
+    passe - utilisateur libre (ex. "admin"), mot de passe = ADMIN_PASSWORD.
+    """
+    valide, message_config = _acces_admin_valide()
+    if message_config:
+        return message_config, 503
+    if not valide:
+        return (
+            "Authentification requise.",
+            401,
+            {"WWW-Authenticate": 'Basic realm="Fisca AI Admin"'},
+        )
 
     db = get_db()
     cur = db.cursor()
@@ -662,4 +719,3 @@ if __name__ == "__main__":
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
-
