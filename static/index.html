@@ -1,823 +1,723 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fisca AI</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
-
-  :root{
-    --marine: #0E2A3A; --marine-deep: #081B26; --marine-line: #1C3D4F;
-    --orange: #E07A3F; --orange-deep: #C6642E; --vert: #3E7D5A; --or: #C9A24B;
-    --cream: #F6F2E9; --ink: #172227; --paper: #FBF9F4;
-  }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{font-family:'Inter', sans-serif; background: var(--marine-deep); color: var(--ink); height:100vh; overflow:hidden;}
-  @supports (height: 100dvh){ body{height:100dvh;} }
-
-  .app{display:flex; flex-direction:column; height:100vh; max-width:480px; margin:0 auto; background: var(--paper); position:relative; box-shadow: 0 0 60px rgba(0,0,0,0.4);}
-  @supports (height: 100dvh){ .app{height:100dvh;} }
-
-  .header{background: var(--marine); color: var(--cream); padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom: 1px solid var(--marine-line);}
-  .header-left{display:flex; align-items:center; gap:12px; min-width:0; flex-shrink:1;}
-  .logo-mark{width:32px; height:32px; border-radius:7px; background:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:3px; box-shadow:0 1px 3px rgba(0,0,0,0.15);}
-  .logo-mark img{width:100%; height:100%; object-fit:contain;}
-  .logo-text{font-family:'Fraunces', serif; font-weight:600; font-size:16.5px;}
-  .logo-sub{font-size:9.5px; color:var(--or); letter-spacing:1.4px; text-transform:uppercase; margin-top:-2px; font-weight:600;}
-  .version-pill{background: rgba(201,162,75,0.14); border:1px solid rgba(201,162,75,0.4); color: var(--or); font-size:11px; font-weight:600; letter-spacing:0.4px; padding:4px 12px; border-radius:20px; text-transform:uppercase; white-space:nowrap; flex-shrink:0;}
-  .logout-btn{background:none; border:none; color:var(--cream); opacity:0.7; cursor:pointer; font-size:12px; text-decoration:underline; flex-shrink:0;}
-
-  .menu-btn{background:none; border:none; color:var(--cream); cursor:pointer; padding:4px; display:flex; align-items:center; opacity:0.9; flex-shrink:0;}
-  .drawer-overlay{position:absolute; inset:0; background:rgba(0,0,0,0.4); z-index:40; display:none;}
-  .drawer-overlay.open{display:block;}
-  .drawer{position:absolute; top:0; left:0; bottom:0; width:78%; max-width:280px; background:var(--marine); color:var(--cream); z-index:50; transform:translateX(-100%); transition:transform 0.2s ease; display:flex; flex-direction:column; padding:18px 0;}
-  .drawer.open{transform:translateX(0);}
-  .drawer-header{padding:0 18px 16px; border-bottom:1px solid var(--marine-line); margin-bottom:8px;}
-  .drawer-header .logo-text{font-size:17px;}
-  .drawer-item{display:flex; align-items:center; gap:12px; padding:13px 18px; background:none; border:none; color:var(--cream); font-size:14.5px; text-align:left; cursor:pointer; width:100%; font-family:'Inter',sans-serif;}
-  .drawer-item:hover{background:rgba(255,255,255,0.06);}
-  .drawer-item .icon{width:20px; text-align:center; opacity:0.85;}
-
-  .sub-screen{display:none; flex-direction:column; position:absolute; inset:0; z-index:30; background:var(--paper);}
-  .sub-screen.open{display:flex;}
-  .sub-header{display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid #E5DCC7; background:var(--paper);}
-  .sub-header button{background:none; border:none; font-size:18px; color:var(--marine); cursor:pointer; padding:2px 6px;}
-  .sub-header h2{font-family:'Fraunces',serif; font-size:17px; color:var(--marine); font-weight:600;}
-  .sub-body{flex:1; overflow-y:auto; padding:16px;}
-
-  .hist-group-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#8A8071; margin:16px 0 8px;}
-  .hist-group-title:first-child{margin-top:0;}
-  .hist-item{background:#fff; border:1px solid #E5DCC7; border-radius:11px; padding:12px 14px; margin-bottom:8px;}
-  .hist-item .hq{font-size:13.5px; font-weight:600; color:var(--marine); margin-bottom:4px;}
-  .hist-item .ha{font-size:12.5px; color:#5C6B70; line-height:1.4;}
-  .hist-empty, .lib-empty{text-align:center; color:#8A8071; font-size:13px; padding:40px 20px;}
-
-  .lib-card{background:#fff; border:1px solid #E5DCC7; border-radius:13px; padding:16px; margin-bottom:12px;}
-  .lib-card .lib-type{display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--orange); background:rgba(224,122,63,0.1); padding:3px 9px; border-radius:20px; margin-bottom:8px;}
-  .lib-card .lib-titre{font-family:'Fraunces',serif; font-size:15.5px; font-weight:600; color:var(--marine); margin-bottom:3px;}
-  .lib-card .lib-auteur{font-size:12px; color:#8A8071; margin-bottom:8px;}
-  .lib-card .lib-desc{font-size:13px; color:#5C6B70; line-height:1.5; margin-bottom:8px;}
-  .lib-card .lib-statut{font-size:11px; font-weight:600; color:var(--vert);}
-  .lib-card .lib-statut::before{content:"● "; }
-
-  .lib-tabs{display:flex; gap:6px; padding:0 0 14px; overflow-x:auto;}
-  .lib-tab{flex-shrink:0; padding:7px 14px; border-radius:20px; border:1px solid #E5DCC7; background:#fff; color:var(--marine); font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;}
-  .lib-tab.active{background:var(--marine); color:#fff; border-color:var(--marine);}
-  .lib-panel{display:none;}
-  .lib-panel.active{display:block;}
-
-  .shop-card{display:flex; gap:12px; background:#fff; border:1px solid #E5DCC7; border-radius:13px; padding:12px; margin-bottom:12px;}
-  .shop-cover{width:58px; height:78px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:26px;}
-  .shop-cover-image{background:none !important; box-shadow:0 3px 8px rgba(14,42,58,0.2); border-radius:4px;}
-  .shop-cover-image img{width:100%; height:100%; object-fit:cover; border-radius:4px;}
-  .shop-info{flex:1; min-width:0;}
-  .shop-titre{font-family:'Fraunces',serif; font-size:14.5px; font-weight:600; color:var(--marine); line-height:1.25; margin-bottom:2px;}
-  .shop-auteur{font-size:11.5px; color:#8A8071; margin-bottom:5px;}
-  .shop-desc{font-size:12px; color:#5C6B70; line-height:1.4; margin-bottom:8px;}
-  .shop-bottom{display:flex; align-items:center; justify-content:space-between; gap:8px;}
-  .shop-prix{font-size:12.5px; font-weight:700; color:var(--vert);}
-  .shop-prix-original{font-size:11px; color:#B0A793; text-decoration:line-through; margin-right:5px;}
-  .shop-btn{padding:7px 13px; border-radius:20px; border:none; background:var(--orange); color:#fff; font-size:12px; font-weight:600; cursor:pointer;}
-  .shop-btn:hover{background:var(--orange-deep);}
-  .shop-btn.secondaire{background:var(--marine);}
-  .shop-btn.desactive{background:#DDD5C4; color:#8A8071; cursor:not-allowed;}
-  .shop-badge{font-size:10px; font-weight:700; text-transform:uppercase; color:var(--or); background:rgba(201,162,75,0.12); padding:3px 8px; border-radius:20px;}
-
-  .plan-card{background:#fff; border:1.5px solid #E5DCC7; border-radius:14px; padding:16px; margin-bottom:12px; position:relative;}
-  .plan-card.recommande{border-color:var(--orange);}
-  .plan-card .plan-tag{position:absolute; top:-10px; right:14px; background:var(--orange); color:#fff; font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 10px; border-radius:20px;}
-  .plan-nom{font-family:'Fraunces',serif; font-size:17px; font-weight:600; color:var(--marine);}
-  .plan-prix{font-size:22px; font-weight:700; color:var(--marine); margin:6px 0 10px;}
-  .plan-prix span{font-size:12px; font-weight:500; color:#8A8071;}
-  .plan-avantages{list-style:none; margin-bottom:12px;}
-  .plan-avantages li{font-size:12.5px; color:#3E5A4A; padding:4px 0; padding-left:20px; position:relative;}
-  .plan-avantages li::before{content:"✓"; position:absolute; left:0; color:var(--vert); font-weight:700;}
-  .plan-btn{width:100%; padding:10px; border-radius:10px; border:none; font-size:13px; font-weight:600; cursor:pointer;}
-  .plan-btn.actif{background:var(--marine); color:#fff;}
-  .plan-btn.inactif{background:#EFE9DB; color:#8A8071; cursor:not-allowed;}
-
-  /* ===== CALENDRIER FISCAL ===== */
-  .cal-tabs{display:flex; gap:6px; padding:0 0 14px; overflow-x:auto;}
-  .cal-tab{flex-shrink:0; padding:7px 13px; border-radius:20px; border:1px solid #E5DCC7; background:#fff; color:var(--marine); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;}
-  .cal-tab.active{background:var(--marine); color:#fff; border-color:var(--marine);}
-  .cal-panel{display:none;}
-  .cal-panel.active{display:block;}
-  .cal-item{display:flex; gap:10px; background:#fff; border:1px solid #E5DCC7; border-radius:11px; padding:11px 13px; margin-bottom:8px;}
-  .cal-day{flex-shrink:0; width:30px; height:30px; border-radius:8px; background:var(--or); color:#fff; font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center;}
-  .cal-info .cal-libelle{font-size:13px; font-weight:600; color:var(--marine); line-height:1.3; margin-bottom:4px;}
-  .cal-info .cal-meta{display:flex; flex-wrap:wrap; gap:5px;}
-  .cal-tag{font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; background:rgba(201,162,75,0.15); color:#8A6415;}
-  .cal-tag.article{background:rgba(14,42,58,0.08); color:var(--marine);}
-  .cal-empty{text-align:center; color:#8A8071; font-size:12.5px; padding:20px;}
-  .cal-section-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#8A8071; margin:20px 0 8px;}
-  .cal-section-title:first-child{margin-top:0;}
-  .cal-event-card{background:#fff; border:1px solid #E5DCC7; border-left:3px solid var(--or); border-radius:10px; padding:11px 13px; margin-bottom:8px;}
-  .cal-event-trigger{font-size:10px; text-transform:uppercase; letter-spacing:0.3px; color:#8A6415; font-weight:700; margin-bottom:4px;}
-  .cal-event-libelle{font-size:13px; font-weight:600; color:var(--marine); margin-bottom:6px;}
-  .cal-event-delai{font-size:10.5px; font-weight:600; color:var(--vert); background:rgba(62,125,90,0.1); padding:2px 8px; border-radius:20px; display:inline-block;}
-
-  .profil-field{margin-bottom:16px;}
-  .profil-field label{display:block; font-size:12px; font-weight:600; color:var(--marine); margin-bottom:5px;}
-  .profil-field .value{font-size:14px; color:#3a3a3a; padding:11px 13px; background:#fff; border:1px solid #E5DCC7; border-radius:10px;}
-  .profil-quota{background:rgba(62,125,90,0.08); border:1px solid rgba(62,125,90,0.25); border-radius:11px; padding:14px; margin-bottom:20px; text-align:center;}
-  .profil-quota b{font-size:22px; color:var(--vert); display:block;}
-  .profil-btn{width:100%; padding:11px; border:1.5px solid var(--marine); background:none; color:var(--marine); border-radius:10px; font-weight:600; font-size:13.5px; cursor:pointer; margin-top:6px;}
-  .profil-btn:hover{background:var(--marine); color:#fff;}
-  .profil-msg{font-size:12.5px; padding:9px 12px; border-radius:8px; margin-top:10px; display:none;}
-  .profil-msg.ok{display:block; background:rgba(62,125,90,0.1); color:var(--vert);}
-  .profil-msg.err{display:block; background:#FBEAE6; color:#B0432B;}
-
-  .source-bar{background: var(--marine-deep); color: var(--cream); padding:9px 16px; display:flex; align-items:center; gap:8px; font-size:12.5px; border-bottom:1px solid var(--marine-line);}
-  .source-bar .source-label{opacity:0.6; font-weight:500;}
-  .source-bar .source-name{font-weight:600;}
-
-  .auth-screen{flex:1; display:flex; flex-direction:column; justify-content:center; padding:28px 24px; overflow-y:auto;}
-  .auth-mark{width:64px; height:64px; border-radius:16px; margin:0 auto 18px; background:#fff; display:flex; align-items:center; justify-content:center; padding:8px; box-shadow:0 2px 8px rgba(14,42,58,0.15);}
-  .auth-mark img{width:100%; height:100%; object-fit:contain;}
-  .auth-title{font-family:'Fraunces', serif; font-weight:600; font-size:21px; color:var(--marine); text-align:center; margin-bottom:6px;}
-  .auth-sub{font-size:13px; color:#6C7A7F; text-align:center; margin-bottom:26px;}
-  .field-label{font-size:12px; font-weight:600; color:var(--marine); margin-bottom:5px; display:block;}
-  .field-input{width:100%; padding:11px 13px; border:1.5px solid #E5DCC7; border-radius:10px; font-size:14px; margin-bottom:14px; font-family:'Inter',sans-serif; background:#fff;}
-  .field-input:focus{outline:none; border-color:var(--orange);}
-  .auth-submit{width:100%; padding:12px; border:none; border-radius:10px; background:var(--orange); color:#fff; font-weight:600; font-size:14.5px; cursor:pointer; margin-top:4px;}
-  .auth-submit:hover{background:var(--orange-deep);}
-  .auth-switch{text-align:center; margin-top:16px; font-size:13px; color:#6C7A7F;}
-  .auth-switch a{color:var(--orange); font-weight:600; cursor:pointer; text-decoration:none;}
-  .auth-error{background:#FBEAE6; color:#B0432B; border:1px solid #F0C7BB; padding:9px 12px; border-radius:8px; font-size:12.5px; margin-bottom:14px; display:none;}
-
-  .chat{flex:1; overflow-y:auto; padding:20px 16px 12px; display:flex; flex-direction:column; gap:16px; background: radial-gradient(circle at 15% 8%, rgba(201,162,75,0.05), transparent 45%), var(--paper);}
-  .welcome{text-align:center; padding:24px 12px 8px;}
-  .welcome-mark{width:60px; height:60px; border-radius:14px; margin:0 auto 16px; background:#fff; display:flex; align-items:center; justify-content:center; padding:7px; box-shadow:0 2px 8px rgba(14,42,58,0.15);}
-  .welcome-mark img{width:100%; height:100%; object-fit:contain;}
-  .welcome h1{font-family:'Fraunces', serif; font-weight:600; font-size:22px; color: var(--marine); margin-bottom:8px;}
-  .welcome p{font-size:14px; color:#5C6B70; line-height:1.5; max-width:300px; margin:0 auto;}
-  .suggestions{display:flex; flex-direction:column; gap:8px; margin-top:22px;}
-  .suggestion-chip{background: var(--cream); border:1px solid #E5DCC7; color: var(--marine); padding:11px 14px; border-radius:11px; font-size:13.5px; text-align:left; cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:9px;}
-  .suggestion-chip:hover{border-color: var(--orange); background: #FBF3EA;}
-  .suggestion-chip::before{content:"?"; width:18px; height:18px; border-radius:50%; background: var(--marine); color:var(--cream); font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-
-  .msg-row{display:flex; flex-direction:column; max-width:88%;}
-  .msg-row.user{align-self:flex-end; align-items:flex-end;}
-  .msg-row.bot{align-self:flex-start; align-items:flex-start;}
-  .bubble{padding:12px 14px; border-radius:14px; font-size:14px; line-height:1.55;}
-  .msg-row.user .bubble{background: var(--marine); color: var(--cream); border-bottom-right-radius:4px;}
-  .msg-row.bot .bubble{background: var(--cream); border:1px solid #E5DCC7; color: var(--ink); border-bottom-left-radius:4px;}
-  .sources-block{margin-top:7px; padding:9px 12px; background: rgba(62,125,90,0.07); border-left:2.5px solid var(--vert); border-radius:6px; font-size:11.5px; color:#3E5A4A;}
-  .sources-block.unverified{background: rgba(224,122,63,0.08); border-left-color: var(--orange); color:#8A4A24;}
-  .sources-block .src-title{font-weight:700; text-transform:uppercase; letter-spacing:0.4px; font-size:10px; margin-bottom:3px;}
-  .msg-actions{display:flex; gap:4px; margin-top:6px;}
-  .msg-actions button{background:none; border:none; cursor:pointer; font-size:13px; padding:4px 6px; border-radius:6px; color:#9A9184; opacity:0.7;}
-  .msg-actions button:hover{opacity:1; background:#EFE9DB;}
-  .msg-actions button.active{opacity:1; background:#EFE9DB;}
-  .typing{display:flex; gap:4px; padding:14px 16px; background:var(--cream); border:1px solid #E5DCC7; border-radius:14px; border-bottom-left-radius:4px; width:fit-content;}
-  .typing span{width:6px; height:6px; border-radius:50%; background:var(--orange); animation: bounce 1.3s infinite ease-in-out;}
-  .typing span:nth-child(2){animation-delay:0.15s;} .typing span:nth-child(3){animation-delay:0.3s;}
-  @keyframes bounce{0%,60%,100%{transform:translateY(0); opacity:0.5;} 30%{transform:translateY(-4px); opacity:1;}}
-
-  .quota-bar{padding:6px 16px; font-size:10.5px; color:#8A8071; text-align:center; border-top:1px solid #EDE6D6; background:var(--paper);}
-  .quota-bar b{color:var(--marine);}
-  .input-zone{padding:12px 14px 16px; background: var(--paper); border-top:1px solid #E5DCC7; display:flex; align-items:flex-end; gap:8px;}
-  .input-field{flex:1; background:#fff; border:1.5px solid #E5DCC7; border-radius:20px; padding:11px 16px; font-size:14px; font-family:'Inter',sans-serif; outline:none;}
-  .input-field:focus{border-color:var(--orange);}
-  .send-btn{width:40px; height:40px; border-radius:50%; border:none; background: var(--orange); color:white; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-  .send-btn:hover{background:var(--orange-deep);}
-  .disclaimer{text-align:center; font-size:9.5px; color:#B0A793; padding-bottom:2px;}
-  .hidden{display:none !important;}
-
-  @media (max-width: 360px){
-    .logo-sub{display:none;} .logo-text{font-size:15px;}
-    .version-pill{font-size:9.5px; padding:3px 8px;}
-    .header{padding:12px 10px;} .source-bar{font-size:11px; padding:8px 10px;}
-    .chat{padding:16px 12px 10px;} .welcome h1{font-size:19px;} .welcome p{font-size:13px;}
-    .input-zone{padding:10px 10px 14px;}
-  }
-  @media (max-width: 300px){
-    .version-pill{display:none;} .logo-text{font-size:13.5px;} .header-left{gap:8px;}
-    .logo-mark{width:26px; height:26px; font-size:13px;} .header{padding:10px 8px;}
-    .source-bar .source-label{display:none;} .source-bar{font-size:10.5px; padding:7px 8px; gap:6px;}
-    .suggestion-chip{font-size:12.5px; padding:10px 12px;}
-    .welcome-mark{width:44px; height:44px; font-size:20px;} .welcome h1{font-size:17px;}
-    .disclaimer{font-size:8.5px; padding:0 6px 2px;}
-  }
-</style>
-</head>
-<body>
-
-<div class="app">
-
-  <div class="header">
-    <div class="header-left">
-      <button class="menu-btn hidden" id="menuBtn" aria-label="Menu">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5H17M3 10H17M3 15H17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      </button>
-      <div class="logo-mark"><img src="/images/logo_icone.png" alt="Fisca AI"></div>
-      <div>
-        <div class="logo-text">Fisca AI</div>
-        <div class="logo-sub">Fisca Times</div>
-      </div>
-    </div>
-    <div class="version-pill">Phase test</div>
-    <button class="logout-btn hidden" id="logoutBtn">Déconnexion</button>
-  </div>
-
-  <!-- ===== ECRAN AUTHENTIFICATION ===== -->
-  <div class="auth-screen" id="authScreen">
-    <div class="auth-mark"><img src="/images/logo_icone.png" alt="Fisca AI"></div>
-    <div class="auth-title" id="authTitle">Connexion</div>
-    <div class="auth-sub" id="authSub">Accédez à votre espace Fisca AI</div>
-
-    <div class="auth-error" id="authError"></div>
-
-    <div id="nomField" class="hidden">
-      <label class="field-label">Nom</label>
-      <input type="text" class="field-input" id="nomInput" placeholder="Votre nom">
-    </div>
-    <label class="field-label">Téléphone ou email</label>
-    <input type="text" class="field-input" id="contactInput" placeholder="ex. 90000000">
-    <label class="field-label">Mot de passe</label>
-    <input type="password" class="field-input" id="mdpInput" placeholder="4 caractères minimum">
-
-    <button class="auth-submit" id="authSubmitBtn">Se connecter</button>
-    <div class="auth-switch" id="authSwitch">Pas encore de compte ? <a id="authSwitchLink">Créer un compte</a></div>
-  </div>
-
-  <!-- ===== ECRAN CHAT ===== -->
-  <div id="chatScreen" class="hidden" style="display:none; flex-direction:column; flex:1; min-height:0;">
-    <div class="source-bar">
-      <span>📘</span>
-      <span class="source-label">Source active</span>
-      <span class="source-name" id="sourceName">Comprendre la Facture Certifiée</span>
-    </div>
-
-    <div class="chat" id="chat">
-      <div class="welcome" id="welcome">
-        <div class="welcome-mark"><img src="/images/logo_icone.png" alt="Fisca AI"></div>
-        <h1>Bonjour<span id="welcomeName"></span>.</h1>
-        <p>Je suis Fisca AI, assistant documentaire spécialisé dans la fiscalité nigérienne. Posez votre première question.</p>
-        <div class="suggestions" id="suggestions"></div>
-      </div>
-    </div>
-
-    <div class="quota-bar" id="quotaBar"></div>
-
-    <div class="input-zone">
-      <input type="text" class="input-field" id="inputField" placeholder="Posez votre question…">
-      <button class="send-btn" id="sendBtn">
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10L18 3L11 18L9 11L2 10Z" fill="white"/></svg>
-      </button>
-    </div>
-    <div class="disclaimer">Fisca AI explique des documents fiscaux — ne remplace pas un conseiller ou l'administration.</div>
-  </div>
-
-  <!-- ===== TIROIR MENU ===== -->
-  <div class="drawer-overlay" id="drawerOverlay"></div>
-  <div class="drawer" id="drawer">
-    <div class="drawer-header">
-      <div class="logo-text">Fisca AI</div>
-    </div>
-    <button class="drawer-item" id="menuHistorique"><span class="icon">🕘</span> Historique</button>
-    <button class="drawer-item" id="menuBibliotheque"><span class="icon">📚</span> Bibliothèque</button>
-    <button class="drawer-item" id="menuCalendrier"><span class="icon">📅</span> Calendrier fiscal</button>
-    <button class="drawer-item" id="menuProfil"><span class="icon">👤</span> Mon profil</button>
-    <button class="drawer-item" id="menuDeconnexion"><span class="icon">🚪</span> Déconnexion</button>
-  </div>
-
-  <!-- ===== ECRAN HISTORIQUE ===== -->
-  <div class="sub-screen" id="historyScreen">
-    <div class="sub-header">
-      <button id="historyBack">←</button>
-      <h2>Historique</h2>
-    </div>
-    <div class="sub-body" id="historyBody"></div>
-  </div>
-
-  <!-- ===== ECRAN BIBLIOTHEQUE ===== -->
-  <div class="sub-screen" id="libraryScreen">
-    <div class="sub-header">
-      <button id="libraryBack">←</button>
-      <h2>Bibliothèque</h2>
-    </div>
-    <div class="sub-body" id="libraryBody"></div>
-  </div>
-
-  <!-- ===== ECRAN CALENDRIER FISCAL ===== -->
-  <div class="sub-screen" id="calendarScreen">
-    <div class="sub-header">
-      <button id="calendarBack">←</button>
-      <h2>Calendrier fiscal</h2>
-    </div>
-    <div class="sub-body" id="calendarBody"></div>
-  </div>
-
-  <!-- ===== ECRAN PROFIL ===== -->
-  <div class="sub-screen" id="profileScreen">
-    <div class="sub-header">
-      <button id="profileBack">←</button>
-      <h2>Mon profil</h2>
-    </div>
-    <div class="sub-body" id="profileBody"></div>
-  </div>
-
-</div>
-
-<script>
-  const API = "";
-  let mode = "connexion"; // ou "inscription"
-
-  const authScreen = document.getElementById('authScreen');
-  const chatScreen = document.getElementById('chatScreen');
-  const authTitle = document.getElementById('authTitle');
-  const authSub = document.getElementById('authSub');
-  const authError = document.getElementById('authError');
-  const nomField = document.getElementById('nomField');
-  const nomInput = document.getElementById('nomInput');
-  const contactInput = document.getElementById('contactInput');
-  const mdpInput = document.getElementById('mdpInput');
-  const authSubmitBtn = document.getElementById('authSubmitBtn');
-  const authSwitch = document.getElementById('authSwitch');
-  const authSwitchLink = document.getElementById('authSwitchLink');
-  const logoutBtn = document.getElementById('logoutBtn');
-
-  function setMode(m){
-    mode = m;
-    authError.style.display = 'none';
-    if(mode === 'connexion'){
-      authTitle.textContent = 'Connexion';
-      authSub.textContent = 'Accédez à votre espace Fisca AI';
-      nomField.classList.add('hidden');
-      authSubmitBtn.textContent = 'Se connecter';
-      authSwitch.innerHTML = "Pas encore de compte ? <a id='authSwitchLink'>Créer un compte</a>";
-    } else {
-      authTitle.textContent = 'Créer un compte';
-      authSub.textContent = 'Rejoignez Fisca AI en quelques secondes';
-      nomField.classList.remove('hidden');
-      authSubmitBtn.textContent = 'Créer mon compte';
-      authSwitch.innerHTML = "Déjà un compte ? <a id='authSwitchLink'>Se connecter</a>";
-    }
-    document.getElementById('authSwitchLink').addEventListener('click', ()=> setMode(mode === 'connexion' ? 'inscription' : 'connexion'));
-  }
-  document.getElementById('authSwitchLink').addEventListener('click', ()=> setMode('inscription'));
-
-  function showError(msg){
-    authError.textContent = msg;
-    authError.style.display = 'block';
-  }
-
-  authSubmitBtn.addEventListener('click', async ()=>{
-    const contact = contactInput.value.trim();
-    const mdp = mdpInput.value;
-    if(!contact || mdp.length < 4){ showError('Merci de remplir un contact et un mot de passe (4 caractères min).'); return; }
-
-    const url = mode === 'connexion' ? '/api/connexion' : '/api/inscription';
-    const body = mode === 'connexion'
-      ? { contact, mot_de_passe: mdp }
-      : { nom: nomInput.value.trim() || 'Utilisateur', contact, mot_de_passe: mdp };
-
-    if(mode === 'inscription' && !nomInput.value.trim()){ showError("Merci d'indiquer votre nom."); return; }
-
-    try{
-      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-      const data = await res.json();
-      if(!res.ok){ showError(data.erreur || 'Une erreur est survenue.'); return; }
-      startChat(data.nom);
-    } catch(e){
-      showError("Impossible de contacter le serveur. Vérifiez qu'il est bien lancé.");
-    }
-  });
-
-  logoutBtn.addEventListener('click', async ()=>{
-    await fetch('/api/deconnexion', { method:'POST' });
-    location.reload();
-  });
-
-  // ===== CHAT =====
-  const chat = document.getElementById('chat');
-  const welcome = document.getElementById('welcome');
-  const welcomeName = document.getElementById('welcomeName');
-  const suggestionsBox = document.getElementById('suggestions');
-  const quotaBar = document.getElementById('quotaBar');
-  const inputField = document.getElementById('inputField');
-  const sendBtn = document.getElementById('sendBtn');
-  let questionsRestantes = 5;
-
-  function startChat(nom){
-    authScreen.style.display = 'none';
-    chatScreen.classList.remove('hidden');
-    chatScreen.style.display = 'flex';
-    logoutBtn.classList.remove('hidden');
-    menuBtn.classList.remove('hidden');
-    welcomeName.textContent = nom ? (', ' + nom) : '';
-    refreshSession();
-  }
-
-  async function refreshSession(){
-    const res = await fetch('/api/session');
-    const data = await res.json();
-    if(!data.connecte){ location.reload(); return; }
-    questionsRestantes = data.questions_restantes;
-    updateQuotaBar();
-    document.getElementById('sourceName').textContent = data.document_actif;
-    suggestionsBox.innerHTML = '';
-    data.suggestions.forEach(q=>{
-      const btn = document.createElement('button');
-      btn.className = 'suggestion-chip';
-      btn.textContent = q;
-      btn.addEventListener('click', ()=> handleQuestion(q));
-      suggestionsBox.appendChild(btn);
-    });
-  }
-
-  function updateQuotaBar(){
-    quotaBar.innerHTML = 'Il vous reste <b>' + questionsRestantes + '</b> question' + (questionsRestantes===1?'':'s') + " aujourd'hui — plan Gratuit";
-  }
-
-  function addMessage(text, isUser, meta){
-    const row = document.createElement('div');
-    row.className = 'msg-row ' + (isUser ? 'user' : 'bot');
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.textContent = text;
-    row.appendChild(bubble);
-
-    if(!isUser && meta && meta.source){
-      const src = document.createElement('div');
-      src.className = 'sources-block' + (meta.verified === false ? ' unverified' : '');
-      src.innerHTML = '<div class="src-title">' + (meta.verified === false ? 'Contenu non vérifié' : 'Source') + '</div>📘 ' + meta.source;
-      row.appendChild(src);
-
-      const actions = document.createElement('div');
-      actions.className = 'msg-actions';
-      const btnUp = document.createElement('button'); btnUp.textContent = '👍'; btnUp.title = 'Utile';
-      const btnDown = document.createElement('button'); btnDown.textContent = '👎'; btnDown.title = 'Signaler une erreur';
-      btnUp.addEventListener('click', ()=> envoyerRetour(meta.id_question, 'utile', btnUp, btnDown));
-      btnDown.addEventListener('click', ()=> envoyerRetour(meta.id_question, 'erreur', btnUp, btnDown));
-      actions.appendChild(btnUp); actions.appendChild(btnDown);
-      row.appendChild(actions);
-    }
-    chat.appendChild(row);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  async function envoyerRetour(idQuestion, type, btnUp, btnDown){
-    btnUp.classList.toggle('active', type === 'utile');
-    btnDown.classList.toggle('active', type === 'erreur');
-    try{
-      await fetch('/api/retour', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id_question: idQuestion, type }) });
-    } catch(e){}
-  }
-
-  function showTyping(){
-    const t = document.createElement('div');
-    t.className = 'typing'; t.id = 'typingIndicator';
-    t.innerHTML = '<span></span><span></span><span></span>';
-    chat.appendChild(t); chat.scrollTop = chat.scrollHeight;
-  }
-  function hideTyping(){ const t = document.getElementById('typingIndicator'); if(t) t.remove(); }
-
-  async function handleQuestion(texte){
-    if(welcome && welcome.parentElement){ welcome.remove(); }
-    addMessage(texte, true);
-    showTyping();
-
-    try{
-      const res = await fetch('/api/question', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ texte }) });
-      const data = await res.json();
-      hideTyping();
-      if(res.status === 429){
-        addMessage(data.message, false, null);
-        return;
-      }
-      if(!res.ok){
-        addMessage("Une erreur est survenue : " + (data.erreur || 'inconnue') + '.', false, null);
-        return;
-      }
-      questionsRestantes = data.questions_restantes;
-      updateQuotaBar();
-      addMessage(data.reponse, false, { source: data.source, verified: data.verified, id_question: data.id_question });
-    } catch(e){
-      hideTyping();
-      addMessage("Impossible de contacter le serveur. Vérifiez qu'il est bien lancé.", false, null);
-    }
-  }
-
-  sendBtn.addEventListener('click', ()=>{
-    const val = inputField.value.trim();
-    if(!val) return;
-    handleQuestion(val);
-    inputField.value = '';
-  });
-  inputField.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') sendBtn.click(); });
-
-  // Verifier si deja connecte au chargement
-  (async ()=>{
-    const res = await fetch('/api/session');
-    const data = await res.json();
-    if(data.connecte){ startChat(data.nom); }
-  })();
-
-  // ===== MENU TIROIR =====
-  const menuBtn = document.getElementById('menuBtn');
-  const drawer = document.getElementById('drawer');
-  const drawerOverlay = document.getElementById('drawerOverlay');
-
-  function openDrawer(){ drawer.classList.add('open'); drawerOverlay.classList.add('open'); }
-  function closeDrawer(){ drawer.classList.remove('open'); drawerOverlay.classList.remove('open'); }
-
-  menuBtn.addEventListener('click', openDrawer);
-  drawerOverlay.addEventListener('click', closeDrawer);
-
-  document.getElementById('menuDeconnexion').addEventListener('click', ()=>{
-    closeDrawer();
-    logoutBtn.click();
-  });
-
-  // ===== ECRAN HISTORIQUE =====
-  const historyScreen = document.getElementById('historyScreen');
-  const historyBody = document.getElementById('historyBody');
-
-  document.getElementById('menuHistorique').addEventListener('click', async ()=>{
-    closeDrawer();
-    historyScreen.classList.add('open');
-    historyBody.innerHTML = '<div class="hist-empty">Chargement…</div>';
-    try{
-      const res = await fetch('/api/historique');
-      const data = await res.json();
-      if(!data.historique || data.historique.length === 0){
-        historyBody.innerHTML = '<div class="hist-empty">Vous n\'avez pas encore posé de question.</div>';
-        return;
-      }
-      let html = '';
-      data.historique.forEach(groupe=>{
-        html += '<div class="hist-group-title">' + groupe.groupe + '</div>';
-        groupe.questions.forEach(q=>{
-          html += '<div class="hist-item"><div class="hq">' + escapeHtml(q.question) + '</div><div class="ha">' + escapeHtml(q.reponse.slice(0,140)) + (q.reponse.length>140?'…':'') + '</div></div>';
-        });
-      });
-      historyBody.innerHTML = html;
-    } catch(e){
-      historyBody.innerHTML = '<div class="hist-empty">Impossible de charger l\'historique.</div>';
-    }
-  });
-  document.getElementById('historyBack').addEventListener('click', ()=> historyScreen.classList.remove('open'));
-
-  // ===== ECRAN BIBLIOTHEQUE / BOUTIQUE =====
-  const libraryScreen = document.getElementById('libraryScreen');
-  const libraryBody = document.getElementById('libraryBody');
-
-  function renduDocumentTelechargeable(doc){
-    return '<div class="shop-card">'
-      + '<div class="shop-cover" style="background:' + doc.couverture_couleur + '22;">' + doc.couverture_emoji + '</div>'
-      + '<div class="shop-info">'
-      + '<div class="shop-titre">' + escapeHtml(doc.titre) + '</div>'
-      + '<div class="shop-auteur">' + escapeHtml(doc.auteur) + '</div>'
-      + '<div class="shop-desc">' + escapeHtml(doc.description) + '</div>'
-      + '<div class="shop-bottom"><span class="shop-prix">Gratuit</span>'
-      + '<a class="shop-btn secondaire" href="/telechargements/' + encodeURIComponent(doc.fichier) + '" target="_blank">Télécharger</a>'
-      + '</div></div></div>';
-  }
-
-  function renduLivre(livre){
-    const prix = livre.prix_fcfa ? (livre.prix_fcfa.toLocaleString('fr-FR') + ' FCFA') : 'Prix sur demande';
-    const prixBarre = livre.prix_original_fcfa
-      ? '<span class="shop-prix-original">' + livre.prix_original_fcfa.toLocaleString('fr-FR') + ' FCFA</span>'
-      : '';
-    const bouton = livre.disponible_a_la_vente
-      ? '<button class="shop-btn" data-produit="' + livre.id + '" data-titre="' + escapeHtml(livre.titre) + '">Commander</button>'
-      : '<span class="shop-badge">Bientôt disponible</span>';
-    const couverture = livre.couverture_image
-      ? '<img src="' + livre.couverture_image + '" alt="' + escapeHtml(livre.titre) + '">'
-      : livre.couverture_emoji;
-    return '<div class="shop-card">'
-      + '<div class="shop-cover' + (livre.couverture_image ? ' shop-cover-image' : '') + '" style="background:' + livre.couverture_couleur + '22;">' + couverture + '</div>'
-      + '<div class="shop-info">'
-      + '<div class="shop-titre">' + escapeHtml(livre.titre) + '</div>'
-      + '<div class="shop-auteur">' + escapeHtml(livre.auteur) + ' · ' + escapeHtml(livre.type) + '</div>'
-      + '<div class="shop-desc">' + escapeHtml(livre.description) + '</div>'
-      + '<div class="shop-bottom"><span class="shop-prix">' + prixBarre + prix + '</span>' + bouton + '</div>'
-      + '</div></div>';
-  }
-
-  function renduAbonnement(plan){
-    const prix = plan.prix_fcfa === 0 ? 'Gratuit' : (plan.prix_fcfa ? plan.prix_fcfa.toLocaleString('fr-FR') + ' FCFA' : 'À définir');
-    const avantages = plan.avantages.map(a => '<li>' + escapeHtml(a) + '</li>').join('');
-    const bouton = plan.disponible
-      ? '<button class="plan-btn actif">Choisir ce plan</button>'
-      : '<button class="plan-btn inactif" disabled>Bientôt disponible</button>';
-    return '<div class="plan-card ' + (plan.recommande ? 'recommande' : '') + '">'
-      + (plan.recommande ? '<span class="plan-tag">Recommandé</span>' : '')
-      + '<div class="plan-nom">' + escapeHtml(plan.nom) + '</div>'
-      + '<div class="plan-prix">' + prix + (plan.prix_fcfa ? ' <span>/ ' + escapeHtml(plan.periode) + '</span>' : '') + '</div>'
-      + '<ul class="plan-avantages">' + avantages + '</ul>'
-      + bouton + '</div>';
-  }
-
-  async function chargerOngletTelechargements(){
-    const res = await fetch('/api/catalogue');
-    const data = await res.json();
-    document.getElementById('panelTelechargements').innerHTML = data.documents_telechargeables.map(renduDocumentTelechargeable).join('');
-  }
-
-  async function chargerOngletBoutique(){
-    const res = await fetch('/api/catalogue');
-    const data = await res.json();
-    document.getElementById('panelBoutique').innerHTML = data.livres.map(renduLivre).join('');
-    document.querySelectorAll('#panelBoutique .shop-btn[data-produit]').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
-        btn.disabled = true; btn.textContent = 'Un instant…';
-        try{
-          const res = await fetch('/api/commande', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ produit_id: btn.dataset.produit }) });
-          const data = await res.json();
-          if(data.ok && data.lien_whatsapp){
-            window.open(data.lien_whatsapp, '_blank');
-            btn.textContent = 'Commande envoyée ✓';
-          } else {
-            btn.textContent = 'Erreur, réessayez';
-            btn.disabled = false;
-          }
-        } catch(e){
-          btn.textContent = 'Erreur, réessayez';
-          btn.disabled = false;
+# -*- coding: utf-8 -*-
+"""
+Fisca AI - serveur (PHASE TEST, sans API OpenAI, avec base PostgreSQL Render).
+
+Ce serveur a besoin d'une variable d'environnement DATABASE_URL, fournie
+automatiquement par Render quand tu relies ta base PostgreSQL a ce
+service (onglet Environment). Sans elle, le serveur refuse de demarrer
+et l'affiche clairement dans les logs.
+"""
+import hashlib
+import hmac
+import os
+import secrets
+import time
+from datetime import date, datetime
+
+import psycopg2
+import psycopg2.extras
+from flask import Flask, g, jsonify, request, send_from_directory, session
+
+from cache_data import DOCUMENT_ACTIF, SUGGESTIONS
+from catalogue import CATALOGUE, DOCUMENTS_TELECHARGEABLES, ABONNEMENTS, lien_whatsapp_commande
+from payments import initier_paiement
+from engine import repondre
+from calendrier_fiscal_data import get_calendrier_par_mois, DELAIS_EVENEMENTS, MOIS_LABELS
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+QUOTA_GRATUIT_PAR_JOUR = 5
+MOT_DE_PASSE_LONGUEUR_MIN = 8
+
+COMPTES_ILLIMITES = {
+    c.strip().lower()
+    for c in os.environ.get("COMPTES_ILLIMITES", "").split(",")
+    if c.strip()
+}
+
+
+def est_illimite(user):
+    return user["contact"].strip().lower() in COMPTES_ILLIMITES
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+app = Flask(__name__, static_folder="static", static_url_path="")
+app.secret_key = os.environ.get("FISCA_AI_SECRET", secrets.token_hex(32))
+
+
+# ---------------------------------------------------------------------------
+# Protection contre les essais repetes de mot de passe (brute force).
+# Stockage en memoire - suffisant en phase test (un seul worker Render,
+# voir WEB_CONCURRENCY=1 dans les logs). Si un jour plusieurs workers
+# tournent en parallele, il faudra deplacer ce compteur en base de
+# donnees ou vers un service comme Redis pour qu'il reste partage entre
+# eux.
+# ---------------------------------------------------------------------------
+MAX_TENTATIVES_CONNEXION = 5
+DUREE_BLOCAGE_SECONDES = 15 * 60  # 15 minutes
+_tentatives_echouees = {}  # contact -> [timestamps des echecs recents]
+
+
+def _connexion_bloquee(contact):
+    maintenant = time.time()
+    historique = _tentatives_echouees.get(contact, [])
+    historique = [t for t in historique if maintenant - t < DUREE_BLOCAGE_SECONDES]
+    _tentatives_echouees[contact] = historique
+    return len(historique) >= MAX_TENTATIVES_CONNEXION
+
+
+def _enregistrer_echec_connexion(contact):
+    _tentatives_echouees.setdefault(contact, []).append(time.time())
+
+
+def _reinitialiser_tentatives(contact):
+    _tentatives_echouees.pop(contact, None)
+
+
+def get_db():
+    if "db" not in g:
+        if not DATABASE_URL:
+            raise RuntimeError(
+                "DATABASE_URL n'est pas defini. Va dans Render > ton service "
+                "fisca-ai > Environment, et ajoute DATABASE_URL avec "
+                "l'Internal Database URL de ta base PostgreSQL."
+            )
+        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    return g.db
+
+
+@app.teardown_appcontext
+def close_db(exception=None):
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
+
+def init_db():
+    if not DATABASE_URL:
+        print("ATTENTION : DATABASE_URL absent, la base ne sera pas initialisee.")
+        return
+    conn = psycopg2.connect(DATABASE_URL)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            nom TEXT NOT NULL,
+            contact TEXT UNIQUE NOT NULL,
+            sel TEXT NOT NULL,
+            mot_de_passe_hash TEXT NOT NULL,
+            cree_le TIMESTAMP NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS questions_log (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            question_brute TEXT NOT NULL,
+            question_comprise TEXT,
+            reponse TEXT NOT NULL,
+            source TEXT,
+            niveau INTEGER,
+            cree_le TIMESTAMP NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS feedback (
+            id SERIAL PRIMARY KEY,
+            question_log_id INTEGER NOT NULL REFERENCES questions_log(id),
+            type TEXT NOT NULL,
+            cree_le TIMESTAMP NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS commandes (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            produit_id TEXT NOT NULL,
+            nom_produit TEXT NOT NULL,
+            statut TEXT NOT NULL DEFAULT 'en_attente',
+            cree_le TIMESTAMP NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS paiements (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            type TEXT NOT NULL,
+            reference_id TEXT NOT NULL,
+            description TEXT NOT NULL,
+            montant_fcfa INTEGER NOT NULL,
+            fournisseur TEXT,
+            reference_externe TEXT,
+            statut TEXT NOT NULL DEFAULT 'en_attente',
+            cree_le TIMESTAMP NOT NULL,
+            paye_le TIMESTAMP
+        );
+        """
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    print("Base PostgreSQL initialisee (tables verifiees/creees).")
+
+
+def hacher_mot_de_passe(mot_de_passe, sel):
+    return hashlib.pbkdf2_hmac("sha256", mot_de_passe.encode("utf-8"), sel.encode("utf-8"), 100_000).hex()
+
+
+def utilisateur_courant():
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    return cur.fetchone()
+
+
+def questions_posees_aujourdhui(user_id):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        "SELECT COUNT(*) as n FROM questions_log WHERE user_id = %s AND date(cree_le) = %s",
+        (user_id, date.today()),
+    )
+    return cur.fetchone()["n"]
+
+
+@app.route("/api/inscription", methods=["POST"])
+def inscription():
+    data = request.get_json(silent=True) or {}
+    nom = (data.get("nom") or "").strip()
+    contact = (data.get("contact") or "").strip().lower()
+    mot_de_passe = data.get("mot_de_passe") or ""
+
+    if not nom or not contact or len(mot_de_passe) < MOT_DE_PASSE_LONGUEUR_MIN:
+        return jsonify({"erreur": f"Nom, contact et mot de passe ({MOT_DE_PASSE_LONGUEUR_MIN} caracteres minimum) sont requis."}), 400
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id FROM users WHERE contact = %s", (contact,))
+    if cur.fetchone():
+        return jsonify({"erreur": "Un compte existe deja avec ce contact."}), 409
+
+    sel = secrets.token_hex(16)
+    hash_mdp = hacher_mot_de_passe(mot_de_passe, sel)
+    cur.execute(
+        "INSERT INTO users (nom, contact, sel, mot_de_passe_hash, cree_le) VALUES (%s, %s, %s, %s, %s) RETURNING id, nom",
+        (nom, contact, sel, hash_mdp, datetime.now()),
+    )
+    user = cur.fetchone()
+    db.commit()
+    session["user_id"] = user["id"]
+    return jsonify({"ok": True, "nom": user["nom"]})
+
+
+@app.route("/api/connexion", methods=["POST"])
+def connexion():
+    data = request.get_json(silent=True) or {}
+    contact = (data.get("contact") or "").strip().lower()
+    mot_de_passe = data.get("mot_de_passe") or ""
+
+    if _connexion_bloquee(contact):
+        return jsonify({
+            "erreur": "Trop de tentatives incorrectes. Reessayez dans 15 minutes, ou reinitialisez votre mot de passe."
+        }), 429
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM users WHERE contact = %s", (contact,))
+    user = cur.fetchone()
+    if not user or hacher_mot_de_passe(mot_de_passe, user["sel"]) != user["mot_de_passe_hash"]:
+        _enregistrer_echec_connexion(contact)
+        return jsonify({"erreur": "Contact ou mot de passe incorrect."}), 401
+
+    _reinitialiser_tentatives(contact)
+    session["user_id"] = user["id"]
+    return jsonify({"ok": True, "nom": user["nom"]})
+
+
+@app.route("/api/deconnexion", methods=["POST"])
+def deconnexion():
+    session.clear()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/session", methods=["GET"])
+def etat_session():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"connecte": False, "document_actif": DOCUMENT_ACTIF, "suggestions": SUGGESTIONS})
+    posees = questions_posees_aujourdhui(user["id"])
+    if est_illimite(user):
+        questions_restantes = "illimité"
+    else:
+        questions_restantes = max(0, QUOTA_GRATUIT_PAR_JOUR - posees)
+    return jsonify(
+        {
+            "connecte": True,
+            "nom": user["nom"],
+            "questions_restantes": questions_restantes,
+            "quota_total": QUOTA_GRATUIT_PAR_JOUR,
+            "document_actif": DOCUMENT_ACTIF,
+            "suggestions": SUGGESTIONS,
         }
-      });
-    });
-  }
-
-  async function chargerOngletAbonnements(){
-    const res = await fetch('/api/abonnements');
-    const data = await res.json();
-    document.getElementById('panelAbonnements').innerHTML = data.abonnements.map(renduAbonnement).join('');
-  }
-
-  function switchLibTab(nom){
-    document.querySelectorAll('.lib-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === nom));
-    document.querySelectorAll('.lib-panel').forEach(p => p.classList.toggle('active', p.id === 'panel' + nom));
-  }
-
-  document.getElementById('menuBibliotheque').addEventListener('click', async ()=>{
-    closeDrawer();
-    libraryScreen.classList.add('open');
-    libraryBody.innerHTML = `
-      <div class="lib-tabs">
-        <button class="lib-tab active" data-tab="Telechargements">📄 Documents officiels</button>
-        <button class="lib-tab" data-tab="Boutique">📚 Livres & Formations</button>
-        <button class="lib-tab" data-tab="Abonnements">⭐ Abonnements</button>
-      </div>
-      <div class="lib-panel active" id="panelTelechargements"><div class="lib-empty">Chargement…</div></div>
-      <div class="lib-panel" id="panelBoutique"><div class="lib-empty">Chargement…</div></div>
-      <div class="lib-panel" id="panelAbonnements"><div class="lib-empty">Chargement…</div></div>
-    `;
-    document.querySelectorAll('.lib-tab').forEach(t => t.addEventListener('click', ()=> switchLibTab(t.dataset.tab)));
-    try{ await chargerOngletTelechargements(); } catch(e){}
-    try{ await chargerOngletBoutique(); } catch(e){}
-    try{ await chargerOngletAbonnements(); } catch(e){}
-  });
-  document.getElementById('libraryBack').addEventListener('click', ()=> libraryScreen.classList.remove('open'));
+    )
 
 
-  // ===== ECRAN CALENDRIER FISCAL =====
-  const calendarScreen = document.getElementById('calendarScreen');
-  const calendarBody = document.getElementById('calendarBody');
-  let calendrierCache = null;
+@app.route("/api/question", methods=["POST"])
+def poser_question():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Vous devez etre connecte pour poser une question."}), 401
 
-  function renduEcheance(e){
-    return '<div class="cal-item">'
-      + '<div class="cal-day">' + e.jour + '</div>'
-      + '<div class="cal-info">'
-      + '<div class="cal-libelle">' + escapeHtml(e.libelle) + '</div>'
-      + '<div class="cal-meta">'
-      + '<span class="cal-tag">' + escapeHtml(e.impot) + '</span>'
-      + '<span class="cal-tag article">' + escapeHtml(e.article) + '</span>'
-      + '</div></div></div>';
-  }
+    data = request.get_json(silent=True) or {}
+    texte = (data.get("texte") or "").strip()
+    if not texte:
+        return jsonify({"erreur": "La question est vide."}), 400
 
-  function renduMois(numMois, data){
-    if(!data.echeances || data.echeances.length === 0){
-      return '<div class="cal-empty">Aucune échéance particulière ce mois-ci.</div>';
+    posees = questions_posees_aujourdhui(user["id"])
+    illimite = est_illimite(user)
+    if not illimite and posees >= QUOTA_GRATUIT_PAR_JOUR:
+        return jsonify({"erreur": "quota_atteint", "message": "Vous avez atteint votre limite de questions pour aujourd'hui."}), 429
+
+    resultat = repondre(texte)
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """INSERT INTO questions_log
+           (user_id, question_brute, question_comprise, reponse, source, niveau, cree_le)
+           VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+        (
+            user["id"],
+            texte,
+            resultat["question_comprise"],
+            resultat["reponse"],
+            resultat["source"],
+            resultat["niveau"],
+            datetime.now(),
+        ),
+    )
+    id_question = cur.fetchone()["id"]
+    db.commit()
+
+    return jsonify(
+        {
+            "id_question": id_question,
+            "reponse": resultat["reponse"],
+            "source": resultat["source"],
+            "verified": resultat["verified"],
+            "niveau": resultat["niveau"],
+            "questions_restantes": "illimité" if illimite else max(0, QUOTA_GRATUIT_PAR_JOUR - posees - 1),
+        }
+    )
+
+
+@app.route("/api/retour", methods=["POST"])
+def deposer_retour():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+
+    data = request.get_json(silent=True) or {}
+    id_question = data.get("id_question")
+    type_retour = data.get("type")  # "utile" ou "erreur"
+    if type_retour not in ("utile", "erreur") or not id_question:
+        return jsonify({"erreur": "Requete invalide."}), 400
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        "INSERT INTO feedback (question_log_id, type, cree_le) VALUES (%s, %s, %s)",
+        (id_question, type_retour, datetime.now()),
+    )
+    db.commit()
+    return jsonify({"ok": True})
+
+
+DOCUMENTS_BIBLIOTHEQUE = [
+    {
+        "id": "cgi2026",
+        "titre": "Code General des Impots 2026",
+        "auteur": "Republique du Niger",
+        "type": "Texte legal",
+        "description": "Extrait des articles du CGI 2026 relatifs a la facture certifiee et au systeme electronique certifie de facturation (SECeF).",
+        "statut": "Integre",
+    },
+    {
+        "id": "livre",
+        "titre": "Comprendre la Facture Certifiee",
+        "auteur": "Moutari Abdoulaye",
+        "type": "Livre",
+        "description": "Ouvrage de reference sur la facture certifiee au Niger : cadre juridique, technique, sanctions et cas pratiques.",
+        "statut": "Integre",
+    },
+    {
+        "id": "arrete473",
+        "titre": "Arrete N°00473 du 20 novembre 2020",
+        "auteur": "Ministere des Finances - DGI",
+        "type": "Arrete",
+        "description": "Conditions de commercialisation et de distribution des systemes electroniques certifies de facturation (SECeF) au Niger.",
+        "statut": "Integre",
+    },
+    {
+        "id": "arrete474",
+        "titre": "Arrete N°00474 du 20 novembre 2020",
+        "auteur": "Ministere des Finances - DGI",
+        "type": "Arrete",
+        "description": "Modalites d'utilisation des systemes electroniques de facturation et obligations des utilisateurs.",
+        "statut": "Integre",
+    },
+]
+
+
+@app.route("/api/bibliotheque", methods=["GET"])
+def bibliotheque():
+    return jsonify({"documents": DOCUMENTS_BIBLIOTHEQUE})
+
+
+@app.route("/api/calendrier-fiscal", methods=["GET"])
+def calendrier_fiscal():
+    """Calendrier des echeances fiscales (CGI 2026), organise par mois +
+    delais lies a un evenement. Route publique (pas besoin d'etre
+    connecte), comme /api/bibliotheque."""
+    calendrier = get_calendrier_par_mois()
+    calendrier_json = {
+        str(m): {"label": data["label"], "echeances": data["echeances"]}
+        for m, data in calendrier.items()
     }
-    return data.echeances.map(renduEcheance).join('');
-  }
+    return jsonify({
+        "calendrier": calendrier_json,
+        "delais_evenements": DELAIS_EVENEMENTS,
+        "mois_labels": {str(k): v for k, v in MOIS_LABELS.items()},
+    })
 
-  function renduEvenement(d){
-    return '<div class="cal-event-card">'
-      + '<div class="cal-event-trigger">' + escapeHtml(d.evenement) + '</div>'
-      + '<div class="cal-event-libelle">' + escapeHtml(d.libelle) + '</div>'
-      + '<div class="cal-meta" style="margin-bottom:6px;"><span class="cal-tag article">' + escapeHtml(d.article) + '</span></div>'
-      + '<span class="cal-event-delai">Délai : ' + escapeHtml(d.delai) + '</span>'
-      + '</div>';
-  }
 
-  function switchCalTab(numMois){
-    document.querySelectorAll('.cal-tab').forEach(t => t.classList.toggle('active', t.dataset.mois === String(numMois)));
-    document.querySelectorAll('.cal-panel').forEach(p => p.classList.toggle('active', p.id === 'calPanel' + numMois));
-  }
+@app.route("/api/historique", methods=["GET"])
+def historique():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
 
-  document.getElementById('menuCalendrier').addEventListener('click', async ()=>{
-    closeDrawer();
-    calendarScreen.classList.add('open');
-    calendarBody.innerHTML = '<div class="cal-empty">Chargement…</div>';
-    try{
-      if(!calendrierCache){
-        const res = await fetch('/api/calendrier-fiscal');
-        calendrierCache = await res.json();
-      }
-      const data = calendrierCache;
-      const moisActuel = new Date().getMonth() + 1;
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """SELECT id, question_brute, reponse, source, niveau, cree_le
+           FROM questions_log WHERE user_id = %s
+           ORDER BY cree_le DESC LIMIT 100""",
+        (user["id"],),
+    )
+    lignes = cur.fetchall()
 
-      const pdfHtml = '<a class="shop-btn secondaire" style="display:block; text-align:center; margin-bottom:14px;" href="/telechargements/calendrier_fiscal_2026.pdf" target="_blank">📄 Télécharger le calendrier en PDF</a>';
+    aujourdhui = date.today()
+    groupes = {}
+    for ligne in lignes:
+        cree_le = ligne["cree_le"]
+        jour = cree_le.date() if hasattr(cree_le, "date") else aujourdhui
+        if jour == aujourdhui:
+            cle = "Aujourd'hui"
+        elif (aujourdhui - jour).days == 1:
+            cle = "Hier"
+        elif (aujourdhui - jour).days <= 7:
+            cle = "Cette semaine"
+        else:
+            cle = "Plus ancien"
+        groupes.setdefault(cle, []).append(
+            {
+                "id": ligne["id"],
+                "question": ligne["question_brute"],
+                "reponse": ligne["reponse"],
+                "source": ligne["source"],
+                "trouve": ligne["niveau"] == 1,
+                "date": cree_le.isoformat() if hasattr(cree_le, "isoformat") else str(cree_le),
+            }
+        )
 
-      let tabsHtml = '<div class="cal-tabs">';
-      for(let m = 1; m <= 12; m++){
-        tabsHtml += '<button class="cal-tab' + (m === moisActuel ? ' active' : '') + '" data-mois="' + m + '">' + data.mois_labels[m].slice(0,3) + '</button>';
-      }
-      tabsHtml += '</div>';
+    ordre = ["Aujourd'hui", "Hier", "Cette semaine", "Plus ancien"]
+    resultat = [{"groupe": g, "questions": groupes[g]} for g in ordre if g in groupes]
+    return jsonify({"historique": resultat})
 
-      let panelsHtml = '';
-      for(let m = 1; m <= 12; m++){
-        panelsHtml += '<div class="cal-panel' + (m === moisActuel ? ' active' : '') + '" id="calPanel' + m + '">' + renduMois(m, data.calendrier[m]) + '</div>';
-      }
 
-      let eventsHtml = '<div class="cal-section-title">Délais liés à un événement</div>' + data.delais_evenements.map(renduEvenement).join('');
+@app.route("/api/profil", methods=["GET"])
+def voir_profil():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+    posees = questions_posees_aujourdhui(user["id"])
+    cree_le = user["cree_le"]
+    return jsonify(
+        {
+            "nom": user["nom"],
+            "contact": user["contact"],
+            "cree_le": cree_le.isoformat() if hasattr(cree_le, "isoformat") else str(cree_le),
+            "questions_restantes": max(0, QUOTA_GRATUIT_PAR_JOUR - posees),
+            "quota_total": QUOTA_GRATUIT_PAR_JOUR,
+        }
+    )
 
-      calendarBody.innerHTML = pdfHtml + tabsHtml + '<div id="calPanels">' + panelsHtml + '</div>' + eventsHtml;
-      document.querySelectorAll('.cal-tab').forEach(t => t.addEventListener('click', ()=> switchCalTab(t.dataset.mois)));
-    } catch(e){
-      calendarBody.innerHTML = '<div class="cal-empty">Impossible de charger le calendrier fiscal.</div>';
-    }
-  });
-  document.getElementById('calendarBack').addEventListener('click', ()=> calendarScreen.classList.remove('open'));
 
-  // ===== ECRAN PROFIL =====
-  const profileScreen = document.getElementById('profileScreen');
-  const profileBody = document.getElementById('profileBody');
+@app.route("/api/profil", methods=["POST"])
+def modifier_profil():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+    data = request.get_json(silent=True) or {}
+    nouveau_nom = (data.get("nom") or "").strip()
+    if not nouveau_nom:
+        return jsonify({"erreur": "Le nom ne peut pas etre vide."}), 400
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("UPDATE users SET nom = %s WHERE id = %s", (nouveau_nom, user["id"]))
+    db.commit()
+    return jsonify({"ok": True, "nom": nouveau_nom})
 
-  function rendreProfil(p){
-    profileBody.innerHTML = `
-      <div class="profil-quota"><b>${p.questions_restantes} / ${p.quota_total}</b>questions restantes aujourd'hui</div>
-      <div class="profil-field"><label>Nom</label><input class="field-input" id="profilNomInput" value="${escapeHtml(p.nom)}"></div>
-      <div class="profil-field"><label>Contact</label><div class="value">${escapeHtml(p.contact)}</div></div>
-      <button class="profil-btn" id="profilSaveNom">Enregistrer le nom</button>
-      <div class="profil-msg" id="profilMsgNom"></div>
 
-      <div class="profil-field" style="margin-top:22px;"><label>Changer le mot de passe</label>
-        <input class="field-input" id="profilAncienMdp" type="password" placeholder="Mot de passe actuel">
-        <input class="field-input" id="profilNouveauMdp" type="password" placeholder="Nouveau mot de passe">
-      </div>
-      <button class="profil-btn" id="profilSaveMdp">Changer le mot de passe</button>
-      <div class="profil-msg" id="profilMsgMdp"></div>
-    `;
+@app.route("/api/mot-de-passe", methods=["POST"])
+def changer_mot_de_passe():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+    data = request.get_json(silent=True) or {}
+    ancien = data.get("ancien_mot_de_passe") or ""
+    nouveau = data.get("nouveau_mot_de_passe") or ""
 
-    document.getElementById('profilSaveNom').addEventListener('click', async ()=>{
-      const nom = document.getElementById('profilNomInput').value.trim();
-      const msg = document.getElementById('profilMsgNom');
-      try{
-        const res = await fetch('/api/profil', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nom }) });
-        const data = await res.json();
-        msg.className = 'profil-msg ' + (res.ok ? 'ok' : 'err');
-        msg.textContent = res.ok ? 'Nom mis à jour.' : (data.erreur || 'Erreur.');
-        if(res.ok) welcomeName.textContent = nom ? (', ' + nom) : '';
-      } catch(e){
-        msg.className = 'profil-msg err'; msg.textContent = 'Erreur de connexion.';
-      }
-    });
+    if hacher_mot_de_passe(ancien, user["sel"]) != user["mot_de_passe_hash"]:
+        return jsonify({"erreur": "Ancien mot de passe incorrect."}), 401
+    if len(nouveau) < MOT_DE_PASSE_LONGUEUR_MIN:
+        return jsonify({"erreur": f"Le nouveau mot de passe doit faire au moins {MOT_DE_PASSE_LONGUEUR_MIN} caracteres."}), 400
 
-    document.getElementById('profilSaveMdp').addEventListener('click', async ()=>{
-      const ancien_mot_de_passe = document.getElementById('profilAncienMdp').value;
-      const nouveau_mot_de_passe = document.getElementById('profilNouveauMdp').value;
-      const msg = document.getElementById('profilMsgMdp');
-      try{
-        const res = await fetch('/api/mot-de-passe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ancien_mot_de_passe, nouveau_mot_de_passe }) });
-        const data = await res.json();
-        msg.className = 'profil-msg ' + (res.ok ? 'ok' : 'err');
-        msg.textContent = res.ok ? 'Mot de passe changé.' : (data.erreur || 'Erreur.');
-        if(res.ok){ document.getElementById('profilAncienMdp').value=''; document.getElementById('profilNouveauMdp').value=''; }
-      } catch(e){
-        msg.className = 'profil-msg err'; msg.textContent = 'Erreur de connexion.';
-      }
-    });
-  }
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        "UPDATE users SET mot_de_passe_hash = %s WHERE id = %s",
+        (hacher_mot_de_passe(nouveau, user["sel"]), user["id"]),
+    )
+    db.commit()
+    return jsonify({"ok": True})
 
-  document.getElementById('menuProfil').addEventListener('click', async ()=>{
-    closeDrawer();
-    profileScreen.classList.add('open');
-    profileBody.innerHTML = '<div class="hist-empty">Chargement…</div>';
-    try{
-      const res = await fetch('/api/profil');
-      const data = await res.json();
-      rendreProfil(data);
-    } catch(e){
-      profileBody.innerHTML = '<div class="hist-empty">Impossible de charger le profil.</div>';
-    }
-  });
-  document.getElementById('profileBack').addEventListener('click', ()=> profileScreen.classList.remove('open'));
 
-  function escapeHtml(texte){
-    if(!texte) return '';
-    return String(texte).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-</script>
+@app.route("/api/paiement/initier", methods=["POST"])
+def initier_le_paiement():
+    """Initie un paiement (abonnement, livre ou formation). Si aucun
+    fournisseur (MyNITA/iMoney) n'est encore configure, redirige
+    automatiquement vers le circuit manuel WhatsApp deja fonctionnel -
+    l'utilisateur n'est jamais bloque."""
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Vous devez etre connecte."}), 401
 
-</body>
-</html>
+    data = request.get_json(silent=True) or {}
+    type_paiement = data.get("type")  # "abonnement", "livre" ou "formation"
+    reference_id = data.get("reference_id")
+    montant_fcfa = data.get("montant_fcfa")
+    description = data.get("description", "")
+
+    if not type_paiement or not reference_id or not montant_fcfa:
+        return jsonify({"erreur": "Requete de paiement incomplete."}), 400
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """INSERT INTO paiements (user_id, type, reference_id, description, montant_fcfa, statut, cree_le)
+           VALUES (%s, %s, %s, %s, %s, 'en_attente', %s) RETURNING id""",
+        (user["id"], type_paiement, reference_id, description, montant_fcfa, datetime.now()),
+    )
+    id_paiement = cur.fetchone()["id"]
+    db.commit()
+
+    resultat = initier_paiement(montant_fcfa, description, f"fiscaai-{id_paiement}")
+
+    if resultat["ok"]:
+        cur.execute(
+            "UPDATE paiements SET fournisseur = %s WHERE id = %s",
+            (resultat["fournisseur"], id_paiement),
+        )
+        db.commit()
+        return jsonify({"ok": True, "mode": "en_ligne", "lien_paiement": resultat["lien_paiement"]})
+
+    lien = lien_whatsapp_commande(description, user["nom"])
+    return jsonify({"ok": True, "mode": "whatsapp", "lien_paiement": lien})
+
+
+@app.route("/api/paiement/webhook/<fournisseur>", methods=["POST"])
+def webhook_paiement(fournisseur):
+    """Emplacement reserve pour recevoir les confirmations de paiement
+    de MyNITA/iMoney. NON ACTIF tant que ces fournisseurs ne sont pas
+    branches."""
+    return jsonify({"recu": True, "note": "Webhook non actif - fournisseur non encore integre"}), 200
+
+
+@app.route("/api/catalogue", methods=["GET"])
+def catalogue():
+    return jsonify(
+        {
+            "livres": CATALOGUE,
+            "documents_telechargeables": DOCUMENTS_TELECHARGEABLES,
+        }
+    )
+
+
+@app.route("/api/commande", methods=["POST"])
+def passer_commande():
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Vous devez etre connecte pour commander."}), 401
+
+    data = request.get_json(silent=True) or {}
+    produit_id = data.get("produit_id")
+    produit = next((p for p in CATALOGUE if p["id"] == produit_id), None)
+    if not produit:
+        return jsonify({"erreur": "Produit introuvable."}), 404
+    if not produit["disponible_a_la_vente"]:
+        return jsonify({"erreur": "Ce produit n'est pas encore disponible a la vente."}), 400
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """INSERT INTO commandes (user_id, produit_id, nom_produit, statut, cree_le)
+           VALUES (%s, %s, %s, 'en_attente', %s)""",
+        (user["id"], produit_id, produit["titre"], datetime.now()),
+    )
+    db.commit()
+
+    lien = lien_whatsapp_commande(produit["titre"], user["nom"])
+    return jsonify({"ok": True, "lien_whatsapp": lien})
+
+
+@app.route("/api/abonnements", methods=["GET"])
+def abonnements():
+    return jsonify({"abonnements": ABONNEMENTS})
+
+
+@app.route("/telechargements/<nom_fichier>")
+def telecharger_document(nom_fichier):
+    dossier = os.path.join(app.static_folder, "telechargements")
+    return send_from_directory(dossier, nom_fichier, as_attachment=True)
+
+
+@app.route("/")
+def index():
+    return send_from_directory(app.static_folder, "index.html")
+
+
+def _acces_admin_valide():
+    """Verifie l'authentification HTTP Basic pour la page /admin.
+    Comparaison a temps constant (hmac.compare_digest) pour eviter une
+    attaque par mesure de temps."""
+    mot_de_passe_attendu = os.environ.get("ADMIN_PASSWORD")
+    if not mot_de_passe_attendu:
+        return False, "ADMIN_PASSWORD n'est pas configure. Ajoute cette variable d'environnement sur Render pour activer cette page."
+    auth = request.authorization
+    if not auth or not hmac.compare_digest(auth.password or "", mot_de_passe_attendu):
+        return False, None
+    return True, None
+
+
+@app.route("/admin")
+def admin():
+    """Page de consultation simple, protegee par identifiants HTTP Basic
+    (le mot de passe ne transite donc plus jamais dans l'URL, ni dans
+    l'historique du navigateur ou les journaux serveur).
+    Usage : ouvrir /admin, le navigateur demande un identifiant/mot de
+    passe - utilisateur libre (ex. "admin"), mot de passe = ADMIN_PASSWORD.
+    """
+    valide, message_config = _acces_admin_valide()
+    if message_config:
+        return message_config, 503
+    if not valide:
+        return (
+            "Authentification requise.",
+            401,
+            {"WWW-Authenticate": 'Basic realm="Fisca AI Admin"'},
+        )
+
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("SELECT COUNT(*) as n FROM users")
+    nb_users = cur.fetchone()["n"]
+    cur.execute("SELECT COUNT(*) as n FROM questions_log")
+    nb_questions = cur.fetchone()["n"]
+    cur.execute("SELECT COUNT(*) as n FROM feedback WHERE type = 'utile'")
+    nb_utile = cur.fetchone()["n"]
+    cur.execute("SELECT COUNT(*) as n FROM feedback WHERE type = 'erreur'")
+    nb_erreur = cur.fetchone()["n"]
+
+    cur.execute("SELECT nom, contact, cree_le FROM users ORDER BY cree_le DESC LIMIT 50")
+    users = cur.fetchall()
+
+    cur.execute(
+        """SELECT q.question_brute, q.question_comprise, q.reponse, q.niveau, q.cree_le, u.nom
+           FROM questions_log q JOIN users u ON u.id = q.user_id
+           ORDER BY q.cree_le DESC LIMIT 50"""
+    )
+    questions = cur.fetchall()
+
+    def echapper(texte):
+        if texte is None:
+            return ""
+        return (
+            str(texte).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        )
+
+    lignes_users = "".join(
+        f"<tr><td>{echapper(u['nom'])}</td><td>{echapper(u['contact'])}</td><td>{echapper(u['cree_le'])}</td></tr>"
+        for u in users
+    )
+    lignes_questions = "".join(
+        f"<tr><td>{echapper(q['nom'])}</td><td>{echapper(q['question_brute'])}</td>"
+        f"<td>{echapper(q['question_comprise'])}</td><td>{'Trouvee' if q['niveau']==1 else 'Non trouvee'}</td>"
+        f"<td>{echapper(q['cree_le'])}</td></tr>"
+        for q in questions
+    )
+
+    html = f"""
+    <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fisca AI - Admin</title>
+    <style>
+      body{{font-family:sans-serif; padding:16px; background:#FBF9F4; color:#172227;}}
+      h1{{color:#0E2A3A;}} h2{{color:#0E2A3A; margin-top:28px;}}
+      .stats{{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;}}
+      .stat{{background:#fff; border:1px solid #E5DCC7; border-radius:10px; padding:12px 16px;}}
+      .stat b{{display:block; font-size:22px; color:#E07A3F;}}
+      table{{width:100%; border-collapse:collapse; background:#fff; font-size:13px;}}
+      th, td{{border:1px solid #E5DCC7; padding:6px 8px; text-align:left; vertical-align:top;}}
+      th{{background:#0E2A3A; color:#fff;}}
+    </style></head><body>
+    <h1>Fisca AI — Tableau de bord (phase test)</h1>
+    <div class="stats">
+      <div class="stat"><b>{nb_users}</b>Comptes créés</div>
+      <div class="stat"><b>{nb_questions}</b>Questions posées</div>
+      <div class="stat"><b>{nb_utile}</b>👍 Utile</div>
+      <div class="stat"><b>{nb_erreur}</b>👎 Signalé</div>
+    </div>
+    <h2>Derniers comptes (50 max)</h2>
+    <table><tr><th>Nom</th><th>Contact</th><th>Créé le</th></tr>{lignes_users}</table>
+    <h2>Dernières questions (50 max)</h2>
+    <table><tr><th>Utilisateur</th><th>Question posée</th><th>Comprise comme</th><th>Résultat</th><th>Date</th></tr>{lignes_questions}</table>
+    </body></html>
+    """
+    return html
+
+
+@app.route("/api/sante")
+def sante():
+    """Petite route pour verifier rapidement que la base repond."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT 1")
+        return jsonify({"ok": True, "base_de_donnees": "connectee"})
+    except Exception as e:
+        return jsonify({"ok": False, "erreur": str(e)}), 500
+
+
+with app.app_context():
+    init_db()
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
+    print(f"Fisca AI (phase test) - port {port}")
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
 
 
