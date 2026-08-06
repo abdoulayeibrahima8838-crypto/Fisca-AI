@@ -724,6 +724,8 @@
       const data = calendrierCache;
       const moisActuel = new Date().getMonth() + 1;
 
+      const pdfHtml = '<a class="shop-btn secondaire" style="display:block; text-align:center; margin-bottom:14px;" href="/telechargements/calendrier_fiscal_2026.pdf" target="_blank">📄 Télécharger le calendrier en PDF</a>';
+
       let tabsHtml = '<div class="cal-tabs">';
       for(let m = 1; m <= 12; m++){
         tabsHtml += '<button class="cal-tab' + (m === moisActuel ? ' active' : '') + '" data-mois="' + m + '">' + data.mois_labels[m].slice(0,3) + '</button>';
@@ -737,7 +739,7 @@
 
       let eventsHtml = '<div class="cal-section-title">Délais liés à un événement</div>' + data.delais_evenements.map(renduEvenement).join('');
 
-      calendarBody.innerHTML = tabsHtml + '<div id="calPanels">' + panelsHtml + '</div>' + eventsHtml;
+      calendarBody.innerHTML = pdfHtml + tabsHtml + '<div id="calPanels">' + panelsHtml + '</div>' + eventsHtml;
       document.querySelectorAll('.cal-tab').forEach(t => t.addEventListener('click', ()=> switchCalTab(t.dataset.mois)));
     } catch(e){
       calendarBody.innerHTML = '<div class="cal-empty">Impossible de charger le calendrier fiscal.</div>';
@@ -817,4 +819,5 @@
 
 </body>
 </html>
+
 
