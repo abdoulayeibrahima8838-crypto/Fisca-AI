@@ -12,14 +12,14 @@ import hmac
 import os
 import secrets
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import psycopg2
 import psycopg2.extras
 from flask import Flask, g, jsonify, request, send_from_directory, session
 
 from cache_data import DOCUMENT_ACTIF, SUGGESTIONS
-from catalogue import CATALOGUE, DOCUMENTS_TELECHARGEABLES, ABONNEMENTS, lien_whatsapp_commande
+from catalogue import CATALOGUE, DOCUMENTS_TELECHARGEABLES, ABONNEMENTS, WHATSAPP_NUMERO, lien_whatsapp_commande
 from payments import initier_paiement
 from engine import repondre
 from calendrier_fiscal_data import get_calendrier_par_mois, DELAIS_EVENEMENTS, MOIS_LABELS
@@ -151,6 +151,15 @@ def init_db():
             cree_le TIMESTAMP NOT NULL,
             paye_le TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS reinitialisations_mdp (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            code TEXT NOT NULL,
+            cree_le TIMESTAMP NOT NULL,
+            expire_le TIMESTAMP NOT NULL,
+            utilise BOOLEAN NOT NULL DEFAULT FALSE
+        );
         """
     )
     conn.commit()
@@ -161,6 +170,28 @@ def init_db():
 
 def hacher_mot_de_passe(mot_de_passe, sel):
     return hashlib.pbkdf2_hmac("sha256", mot_de_passe.encode("utf-8"), sel.encode("utf-8"), 100_000).hex()
+
+
+# ---------------------------------------------------------------------------
+# Reinitialisation de mot de passe - solution temporaire "manuelle" en
+# attendant que l'envoi automatique par WhatsApp Business API soit pret
+# (une fois le compte Meta Business valide). Le code est genere et
+# stocke cote serveur, mais c'est l'administrateur (toi) qui le
+# transmet manuellement via WhatsApp pour l'instant - voir /admin/codes.
+# ---------------------------------------------------------------------------
+DUREE_VALIDITE_CODE_MINUTES = 15
+
+
+def generer_code_reinitialisation():
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def lien_whatsapp_demande_code(contact):
+    """Lien pre-rempli vers TON WhatsApp (WHATSAPP_NUMERO), pour que la
+    personne te signale sa demande de reinitialisation."""
+    texte = f"Bonjour, j'ai oublie mon mot de passe Fisca AI. Mon contact : {contact}"
+    texte_encode = texte.replace(" ", "%20").replace(",", "%2C").replace(".", "%2E").replace(":", "%3A")
+    return f"https://wa.me/{WHATSAPP_NUMERO}?text={texte_encode}"
 
 
 def utilisateur_courant():
@@ -495,6 +526,74 @@ def changer_mot_de_passe():
     return jsonify({"ok": True})
 
 
+@app.route("/api/mot-de-passe/oublie", methods=["POST"])
+def demander_reinitialisation():
+    """Genere un code de reinitialisation valable 15 minutes. Repond
+    toujours 'ok' meme si le contact n'existe pas, pour ne jamais
+    reveler quels contacts ont un compte (bonne pratique de securite)."""
+    data = request.get_json(silent=True) or {}
+    contact = (data.get("contact") or "").strip().lower()
+    lien_whatsapp = lien_whatsapp_demande_code(contact)
+
+    if not contact:
+        return jsonify({"erreur": "Merci d'indiquer votre contact."}), 400
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id FROM users WHERE contact = %s", (contact,))
+    user = cur.fetchone()
+    if user:
+        code = generer_code_reinitialisation()
+        expire_le = datetime.now() + timedelta(minutes=DUREE_VALIDITE_CODE_MINUTES)
+        cur.execute(
+            "INSERT INTO reinitialisations_mdp (user_id, code, cree_le, expire_le, utilise) VALUES (%s, %s, %s, %s, FALSE)",
+            (user["id"], code, datetime.now(), expire_le),
+        )
+        db.commit()
+
+    return jsonify({
+        "ok": True,
+        "message": "Si ce contact existe, un code a ete prepare. Contactez-nous sur WhatsApp pour le recevoir.",
+        "lien_whatsapp": lien_whatsapp,
+    })
+
+
+@app.route("/api/mot-de-passe/reinitialiser", methods=["POST"])
+def reinitialiser_avec_code():
+    data = request.get_json(silent=True) or {}
+    contact = (data.get("contact") or "").strip().lower()
+    code = (data.get("code") or "").strip()
+    nouveau = data.get("nouveau_mot_de_passe") or ""
+
+    if len(nouveau) < MOT_DE_PASSE_LONGUEUR_MIN:
+        return jsonify({"erreur": f"Le nouveau mot de passe doit faire au moins {MOT_DE_PASSE_LONGUEUR_MIN} caracteres."}), 400
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM users WHERE contact = %s", (contact,))
+    user = cur.fetchone()
+    if not user:
+        return jsonify({"erreur": "Code invalide ou expire."}), 400
+
+    cur.execute(
+        """SELECT * FROM reinitialisations_mdp
+           WHERE user_id = %s AND code = %s AND utilise = FALSE AND expire_le > %s
+           ORDER BY cree_le DESC LIMIT 1""",
+        (user["id"], code, datetime.now()),
+    )
+    demande = cur.fetchone()
+    if not demande:
+        return jsonify({"erreur": "Code invalide ou expire."}), 400
+
+    cur.execute(
+        "UPDATE users SET mot_de_passe_hash = %s WHERE id = %s",
+        (hacher_mot_de_passe(nouveau, user["sel"]), user["id"]),
+    )
+    cur.execute("UPDATE reinitialisations_mdp SET utilise = TRUE WHERE id = %s", (demande["id"],))
+    db.commit()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/paiement/initier", methods=["POST"])
 def initier_le_paiement():
     """Initie un paiement (abonnement, livre ou formation). Si aucun
@@ -697,6 +796,64 @@ def admin():
     </body></html>
     """
     return html
+
+
+@app.route("/admin/codes")
+def admin_codes():
+    """Liste les demandes de reinitialisation en attente (code non
+    utilise, pas encore expire), pour que tu puisses le transmettre
+    manuellement via WhatsApp en attendant l'envoi automatique."""
+    valide, message_config = _acces_admin_valide()
+    if message_config:
+        return message_config, 503
+    if not valide:
+        return (
+            "Authentification requise.",
+            401,
+            {"WWW-Authenticate": 'Basic realm="Fisca AI Admin"'},
+        )
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """SELECT r.code, r.cree_le, r.expire_le, u.nom, u.contact
+           FROM reinitialisations_mdp r JOIN users u ON u.id = r.user_id
+           WHERE r.utilise = FALSE AND r.expire_le > %s
+           ORDER BY r.cree_le DESC""",
+        (datetime.now(),),
+    )
+    demandes = cur.fetchall()
+
+    def echapper(texte):
+        if texte is None:
+            return ""
+        return str(texte).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    lignes = "".join(
+        f"<tr><td>{echapper(d['nom'])}</td><td>{echapper(d['contact'])}</td>"
+        f"<td style='font-weight:700; font-size:18px; letter-spacing:2px;'>{echapper(d['code'])}</td>"
+        f"<td>{echapper(d['expire_le'])}</td></tr>"
+        for d in demandes
+    )
+    if not demandes:
+        lignes = "<tr><td colspan='4' style='text-align:center; color:#8A8071;'>Aucune demande en attente</td></tr>"
+
+    return f"""
+    <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fisca AI - Codes de reinitialisation</title>
+    <style>
+      body{{font-family:sans-serif; padding:16px; background:#FBF9F4; color:#172227;}}
+      h1{{color:#0E2A3A; font-size:20px;}}
+      table{{width:100%; border-collapse:collapse; background:#fff; font-size:14px; margin-top:16px;}}
+      th, td{{border:1px solid #E5DCC7; padding:10px 8px; text-align:left;}}
+      th{{background:#0E2A3A; color:#fff;}}
+      p{{color:#5C6B70; font-size:13px;}}
+    </style></head><body>
+    <h1>Codes de reinitialisation en attente</h1>
+    <p>Valables 15 minutes. Recopie le code et renvoie-le a la personne sur WhatsApp.</p>
+    <table><tr><th>Nom</th><th>Contact</th><th>Code</th><th>Expire le</th></tr>{lignes}</table>
+    </body></html>
+    """
 
 
 @app.route("/api/sante")
