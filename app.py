@@ -16,6 +16,7 @@ from datetime import date, datetime, timedelta
 
 import psycopg2
 import psycopg2.extras
+import requests
 from flask import Flask, g, jsonify, request, send_from_directory, session
 
 from cache_data import DOCUMENT_ACTIF, SUGGESTIONS
@@ -27,6 +28,18 @@ from calendrier_fiscal_data import get_calendrier_par_mois, DELAIS_EVENEMENTS, M
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 QUOTA_GRATUIT_PAR_JOUR = 5
 MOT_DE_PASSE_LONGUEUR_MIN = 8
+
+# ---------------------------------------------------------------------------
+# Integration WhatsApp Business API (Meta Cloud API). WHATSAPP_VERIFY_TOKEN
+# est un mot de passe que TU choisis toi-meme (pas fourni par Meta) - a
+# recopier a l'identique dans le tableau de bord Meta au moment de coller
+# l'URL du webhook. Les deux autres valeurs viennent de Meta (Etape 1 pour
+# l'instant, en attendant le token permanent apres verification).
+# ---------------------------------------------------------------------------
+WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "fisca-ai-verify")
+WHATSAPP_API_VERSION = "v21.0"
 
 COMPTES_ILLIMITES = {
     c.strip().lower()
@@ -237,6 +250,115 @@ def lien_whatsapp_demande_code(contact):
     texte = f"Bonjour, j'ai oublie mon mot de passe Fisca AI. Mon contact : {contact}"
     texte_encode = texte.replace(" ", "%20").replace(",", "%2C").replace(".", "%2E").replace(":", "%3A")
     return f"https://wa.me/{WHATSAPP_NUMERO}?text={texte_encode}"
+
+
+# ---------------------------------------------------------------------------
+# Fonctions WhatsApp - envoi de message, identification automatique par
+# numero (pas de mot de passe necessaire, WhatsApp garantit deja
+# l'identite), et detection d'une intention d'abonnement.
+# ---------------------------------------------------------------------------
+def envoyer_message_whatsapp(numero_destinataire, texte):
+    """Envoie un message texte via l'API WhatsApp. Ne fait jamais planter
+    l'appelant : retourne simplement False et log l'erreur en cas de
+    souci (cle absente, echec reseau, etc.)."""
+    if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
+        print("[WhatsApp] WHATSAPP_ACCESS_TOKEN ou WHATSAPP_PHONE_NUMBER_ID manquant - message non envoye.")
+        return False
+    url = f"https://graph.facebook.com/{WHATSAPP_API_VERSION}/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {"Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}", "Content-Type": "application/json"}
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": numero_destinataire,
+        "type": "text",
+        "text": {"body": texte[:4096]},  # WhatsApp limite la taille d'un message
+    }
+    try:
+        reponse = requests.post(url, headers=headers, json=payload, timeout=10)
+        if reponse.status_code >= 400:
+            print(f"[WhatsApp] Echec de l'envoi ({reponse.status_code}) : {reponse.text}")
+            return False
+        return True
+    except Exception as e:
+        print(f"[WhatsApp] Erreur reseau lors de l'envoi : {e}")
+        return False
+
+
+def utilisateur_whatsapp(numero):
+    """Trouve le compte lie a ce numero WhatsApp, ou le cree
+    automatiquement s'il n'existe pas encore - sans mot de passe,
+    puisque WhatsApp a deja garanti l'identite du numero. Si ce numero
+    correspond a un compte deja cree sur le site (meme contact), c'est
+    exactement le meme compte qui est utilise - meme quota, meme
+    historique."""
+    contact = numero.strip().lower()
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM users WHERE contact = %s", (contact,))
+    user = cur.fetchone()
+    if user:
+        return user
+
+    sel = secrets.token_hex(16)
+    mot_de_passe_genere = secrets.token_hex(16)  # jamais communique ni utilise directement
+    hash_mdp = hacher_mot_de_passe(mot_de_passe_genere, sel)
+    cur.execute(
+        """INSERT INTO users (nom, contact, sel, mot_de_passe_hash, cree_le)
+           VALUES (%s, %s, %s, %s, %s) RETURNING *""",
+        (f"Utilisateur WhatsApp ({numero[-4:]})", contact, sel, hash_mdp, datetime.now()),
+    )
+    user = cur.fetchone()
+    db.commit()
+    return user
+
+
+MOTS_CLES_ABONNEMENT = {"abonnement", "abonnements", "abonner", "s'abonner", "souscrire", "premium", "payant"}
+
+
+def intention_abonnement(texte):
+    texte_normalise = texte.lower().strip()
+    return any(mot in texte_normalise for mot in MOTS_CLES_ABONNEMENT)
+
+
+def reponse_abonnement_whatsapp(texte, numero, user):
+    """Gere la conversation d'abonnement en 2 temps : d'abord presenter
+    les formules, puis enregistrer la commande si la personne confirme
+    avec 'OUI STANDARD' ou 'OUI EXPERT'. Le paiement reste manuel (via
+    MyNITA/iMoney) tant que ces fournisseurs ne sont pas branches - voir
+    payments.py."""
+    texte_normalise = texte.lower().strip()
+
+    if texte_normalise in ("oui standard", "oui expert"):
+        plan_id = "standard" if "standard" in texte_normalise else "expert"
+        plan = next((p for p in ABONNEMENTS if p["id"] == plan_id), None)
+        if not plan or not plan.get("disponible"):
+            return (
+                "Cette formule n'est pas encore disponible a la souscription. "
+                "Contactez-nous directement pour plus d'informations."
+            )
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            """INSERT INTO commandes (user_id, produit_id, nom_produit, statut, cree_le)
+               VALUES (%s, %s, %s, 'en_attente', %s)""",
+            (user["id"], f"abonnement-{plan_id}", f"Abonnement {plan['nom']}", datetime.now()),
+        )
+        db.commit()
+        montant = f"{plan['prix_fcfa']:,} FCFA".replace(",", " ") if plan.get("prix_fcfa") else "un montant a confirmer"
+        return (
+            f"Commande enregistree pour l'abonnement {plan['nom']} ({montant}/mois). "
+            f"Pour finaliser, envoyez le paiement via MyNITA ou iMoney, puis repondez ici "
+            "avec une capture de votre recu. Nous activerons votre compte des reception."
+        )
+
+    lignes = ["Voici nos formules d'abonnement Fisca AI :", ""]
+    for plan in ABONNEMENTS:
+        if plan["id"] == "gratuit" or not plan.get("disponible"):
+            continue
+        prix = f"{plan['prix_fcfa']:,} FCFA/mois".replace(",", " ") if plan.get("prix_fcfa") else "prix a venir"
+        lignes.append(f"{plan['nom'].upper()} ({prix}) : " + ", ".join(plan["avantages"]))
+    lignes.append("")
+    lignes.append("Pour confirmer, repondez : OUI STANDARD ou OUI EXPERT")
+    return "\n".join(lignes)
 
 
 def utilisateur_courant():
@@ -903,6 +1025,79 @@ def admin_codes():
     <table><tr><th>Nom</th><th>Contact</th><th>Code</th><th>Expire le</th></tr>{lignes}</table>
     </body></html>
     """
+
+
+@app.route("/webhook/whatsapp", methods=["GET"])
+def whatsapp_verification():
+    """Meta appelle cette route UNE SEULE FOIS, au moment ou tu colles
+    l'URL du webhook dans son tableau de bord, pour verifier que tu es
+    bien le proprietaire de ce serveur."""
+    mode = request.args.get("hub.mode")
+    token = request.args.get("hub.verify_token")
+    challenge = request.args.get("hub.challenge")
+    if mode == "subscribe" and token == WHATSAPP_VERIFY_TOKEN:
+        return challenge, 200
+    return "Verification echouee.", 403
+
+
+@app.route("/webhook/whatsapp", methods=["POST"])
+def whatsapp_message_recu():
+    """Recoit chaque message entrant sur le numero WhatsApp Fisca AI.
+    Repond toujours 200 rapidement a Meta (sinon Meta considere l'appel
+    en echec et reessaie en boucle), quel que soit ce qui se passe a
+    l'interieur."""
+    data = request.get_json(silent=True) or {}
+
+    try:
+        valeur = data["entry"][0]["changes"][0]["value"]
+        messages = valeur.get("messages")
+        if not messages:
+            # Meta envoie aussi des notifications de statut (message
+            # livre, lu...) sans "messages" - on les ignore simplement.
+            return jsonify({"ok": True})
+        message = messages[0]
+        numero_expediteur = message["from"]
+        texte = (message.get("text", {}) or {}).get("body", "").strip()
+    except (KeyError, IndexError, TypeError):
+        return jsonify({"ok": True})  # format inattendu, on ignore sans erreur
+
+    if not texte:
+        return jsonify({"ok": True})
+
+    user = utilisateur_whatsapp(numero_expediteur)
+
+    if intention_abonnement(texte) or texte.lower().strip() in ("oui standard", "oui expert"):
+        reponse_texte = reponse_abonnement_whatsapp(texte, numero_expediteur, user)
+        envoyer_message_whatsapp(numero_expediteur, reponse_texte)
+        return jsonify({"ok": True})
+
+    posees = questions_posees_aujourdhui(user["id"])
+    illimite = est_illimite(user)
+    if not illimite and posees >= QUOTA_GRATUIT_PAR_JOUR:
+        envoyer_message_whatsapp(
+            numero_expediteur,
+            "Vous avez atteint votre limite de 5 questions gratuites aujourd'hui. "
+            "Ecrivez ABONNEMENT pour decouvrir nos formules illimitees.",
+        )
+        return jsonify({"ok": True})
+
+    resultat = repondre(texte)
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """INSERT INTO questions_log
+           (user_id, question_brute, question_comprise, reponse, source, niveau, cree_le)
+           VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+        (
+            user["id"], texte, resultat["question_comprise"], resultat["reponse"],
+            resultat["source"], resultat["niveau"], datetime.now(),
+        ),
+    )
+    db.commit()
+
+    envoyer_message_whatsapp(numero_expediteur, resultat["reponse"])
+    return jsonify({"ok": True})
 
 
 @app.route("/api/sante")
