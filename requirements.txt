@@ -3,3 +3,4 @@ psycopg2-binary>=2.9
 gunicorn>=21.2
 openai>=1.50
 google-genai>=0.3
+requests>=2.31
