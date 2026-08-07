@@ -335,8 +335,9 @@ def reponse_abonnement_whatsapp(texte, numero, user):
     if texte_normalise == "oui expert":
         return (
             "La formule Expert Fiscal n'est pas proposee via WhatsApp pour "
-            "le moment. Elle est disponible sur notre site web, dans la "
-            "Bibliotheque > Abonnements."
+            "le moment. Elle est disponible sur notre site web : "
+            "https://fisca-ai.onrender.com (rubrique Bibliotheque > Abonnements)."
+        )
         )
 
     if texte_normalise == "oui standard":
