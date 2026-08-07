@@ -345,9 +345,12 @@ def reponse_abonnement_whatsapp(texte, numero, user):
         db.commit()
         montant = f"{plan['prix_fcfa']:,} FCFA".replace(",", " ") if plan.get("prix_fcfa") else "un montant a confirmer"
         return (
-            f"Commande enregistree pour l'abonnement {plan['nom']} ({montant}/mois). "
-            f"Pour finaliser, envoyez le paiement via MyNITA ou iMoney, puis repondez ici "
-            "avec une capture de votre recu. Nous activerons votre compte des reception."
+            f"Commande enregistree pour l'abonnement {plan['nom']} ({montant}/mois).\n\n"
+            f"Pour finaliser, envoyez {montant} via MyNITA ou iMoney au numero "
+            f"{WHATSAPP_NUMERO}.\n\n"
+            "Une fois le paiement effectue, repondez ici avec une capture d'ecran de "
+            "votre recu de transaction pour confirmer. Nous verifierons et activerons "
+            "votre compte des reception."
         )
 
     lignes = ["Voici nos formules d'abonnement Fisca AI :", ""]
@@ -1120,3 +1123,4 @@ if __name__ == "__main__":
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
