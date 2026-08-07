@@ -43,7 +43,33 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 app = Flask(__name__, static_folder="static", static_url_path="")
-app.secret_key = os.environ.get("FISCA_AI_SECRET", secrets.token_hex(32))
+
+_secret_fixe = os.environ.get("FISCA_AI_SECRET")
+if not _secret_fixe:
+    print(
+        "ATTENTION : FISCA_AI_SECRET n'est pas defini sur Render. "
+        "Un secret temporaire est genere a chaque redemarrage, ce qui "
+        "deconnecte TOUS les utilisateurs a chaque redeploiement. "
+        "Ajoute FISCA_AI_SECRET dans Environment sur Render pour corriger ca."
+    )
+app.secret_key = _secret_fixe or secrets.token_hex(32)
+
+# Cookies de session plus surs : uniquement envoyes en HTTPS, jamais
+# lisibles par du JavaScript, et non envoyes lors de navigations
+# provenant d'un autre site (limite certaines attaques cross-site).
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+
+@app.after_request
+def ajouter_entetes_securite(response):
+    """En-tetes de securite standards, purement defensifs - n'affectent
+    pas le fonctionnement normal du site."""
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +99,25 @@ def _enregistrer_echec_connexion(contact):
 
 def _reinitialiser_tentatives(contact):
     _tentatives_echouees.pop(contact, None)
+
+
+# Meme principe de blocage, applique aux demandes de code de
+# reinitialisation - sans lui, rien n'empechait de redemander un code
+# des dizaines de fois de suite pour le meme contact.
+MAX_DEMANDES_REINITIALISATION = 5
+_demandes_reinitialisation = {}  # contact -> [timestamps]
+
+
+def _reinitialisation_bloquee(contact):
+    maintenant = time.time()
+    historique = _demandes_reinitialisation.get(contact, [])
+    historique = [t for t in historique if maintenant - t < DUREE_BLOCAGE_SECONDES]
+    _demandes_reinitialisation[contact] = historique
+    return len(historique) >= MAX_DEMANDES_REINITIALISATION
+
+
+def _enregistrer_demande_reinitialisation(contact):
+    _demandes_reinitialisation.setdefault(contact, []).append(time.time())
 
 
 def get_db():
@@ -537,6 +582,10 @@ def demander_reinitialisation():
 
     if not contact:
         return jsonify({"erreur": "Merci d'indiquer votre contact."}), 400
+
+    if _reinitialisation_bloquee(contact):
+        return jsonify({"erreur": "Trop de demandes recentes pour ce contact. Reessayez dans 15 minutes."}), 429
+    _enregistrer_demande_reinitialisation(contact)
 
     db = get_db()
     cur = db.cursor()
