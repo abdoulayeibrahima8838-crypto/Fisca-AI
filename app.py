@@ -338,7 +338,6 @@ def reponse_abonnement_whatsapp(texte, numero, user):
             "le moment. Elle est disponible sur notre site web : "
             "https://fisca-ai.onrender.com (rubrique Bibliotheque > Abonnements)."
         )
-        )
 
     if texte_normalise == "oui standard":
         plan = next((p for p in ABONNEMENTS if p["id"] == "standard"), None)
@@ -373,8 +372,7 @@ def reponse_abonnement_whatsapp(texte, numero, user):
         lignes.append(f"{plan['nom'].upper()} ({prix}) : " + ", ".join(plan["avantages"]))
     lignes.append("")
     lignes.append("Pour confirmer, repondez : OUI STANDARD")
-    lignes.append("(La formule Expert Fiscal est disponible sur notre site web.)")
-    return "\n".join(lignes)
+    lignes.append("(La formule Expert Fiscal est disponible sur notre site web : https://fisca-ai.onrender.com)")
 
 
 def utilisateur_courant():
