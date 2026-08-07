@@ -115,20 +115,20 @@ ABONNEMENTS = [
     {
         "id": "standard",
         "nom": "Standard",
-        "prix_fcfa": None,  # A DEFINIR avant activation
+        "prix_fcfa": 5000,
         "periode": "par mois",
         "avantages": [
             "50 questions par jour",
             "Reponses via l'IA (recherche complete dans les documents)",
             "Historique illimite",
         ],
-        "disponible": False,  # Bientot disponible
+        "disponible": True,
         "recommande": True,
     },
     {
         "id": "expert",
         "nom": "Expert Fiscal",
-        "prix_fcfa": None,  # A DEFINIR avant activation
+        "prix_fcfa": 15000,
         "periode": "par mois",
         "avantages": [
             "Questions illimitees",
@@ -136,7 +136,8 @@ ABONNEMENTS = [
             "Tous les documents et livres inclus",
             "Support direct par WhatsApp",
         ],
-        "disponible": False,  # Bientot disponible
+        "disponible": True,
         "recommande": False,
     },
 ]
+
