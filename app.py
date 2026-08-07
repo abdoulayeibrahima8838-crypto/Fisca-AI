@@ -313,6 +313,11 @@ def utilisateur_whatsapp(numero):
 
 MOTS_CLES_ABONNEMENT = {"abonnement", "abonnements", "abonner", "s'abonner", "souscrire", "premium", "payant"}
 
+# Sur WhatsApp, seule la formule Standard est proposee (volontairement, pour
+# rester simple au demarrage) - Expert reste disponible uniquement sur le
+# site web. A elargir plus tard en ajoutant "expert" a cet ensemble.
+PLANS_DISPONIBLES_WHATSAPP = {"standard"}
+
 
 def intention_abonnement(texte):
     texte_normalise = texte.lower().strip()
@@ -321,16 +326,22 @@ def intention_abonnement(texte):
 
 def reponse_abonnement_whatsapp(texte, numero, user):
     """Gere la conversation d'abonnement en 2 temps : d'abord presenter
-    les formules, puis enregistrer la commande si la personne confirme
-    avec 'OUI STANDARD' ou 'OUI EXPERT'. Le paiement reste manuel (via
-    MyNITA/iMoney) tant que ces fournisseurs ne sont pas branches - voir
-    payments.py."""
+    la formule Standard (seule proposee sur WhatsApp), puis enregistrer
+    la commande si la personne confirme avec 'OUI STANDARD'. Le paiement
+    reste manuel (via MyNITA/iMoney) tant que ces fournisseurs ne sont
+    pas branches - voir payments.py."""
     texte_normalise = texte.lower().strip()
 
-    if texte_normalise in ("oui standard", "oui expert"):
-        plan_id = "standard" if "standard" in texte_normalise else "expert"
-        plan = next((p for p in ABONNEMENTS if p["id"] == plan_id), None)
-        if not plan or not plan.get("disponible"):
+    if texte_normalise == "oui expert":
+        return (
+            "La formule Expert Fiscal n'est pas proposee via WhatsApp pour "
+            "le moment. Elle est disponible sur notre site web, dans la "
+            "Bibliotheque > Abonnements."
+        )
+
+    if texte_normalise == "oui standard":
+        plan = next((p for p in ABONNEMENTS if p["id"] == "standard"), None)
+        if not plan or not plan.get("disponible") or "standard" not in PLANS_DISPONIBLES_WHATSAPP:
             return (
                 "Cette formule n'est pas encore disponible a la souscription. "
                 "Contactez-nous directement pour plus d'informations."
@@ -340,7 +351,7 @@ def reponse_abonnement_whatsapp(texte, numero, user):
         cur.execute(
             """INSERT INTO commandes (user_id, produit_id, nom_produit, statut, cree_le)
                VALUES (%s, %s, %s, 'en_attente', %s)""",
-            (user["id"], f"abonnement-{plan_id}", f"Abonnement {plan['nom']}", datetime.now()),
+            (user["id"], "abonnement-standard", f"Abonnement {plan['nom']}", datetime.now()),
         )
         db.commit()
         montant = f"{plan['prix_fcfa']:,} FCFA".replace(",", " ") if plan.get("prix_fcfa") else "un montant a confirmer"
@@ -353,14 +364,15 @@ def reponse_abonnement_whatsapp(texte, numero, user):
             "votre compte des reception."
         )
 
-    lignes = ["Voici nos formules d'abonnement Fisca AI :", ""]
+    lignes = ["Voici notre formule d'abonnement disponible sur WhatsApp :", ""]
     for plan in ABONNEMENTS:
-        if plan["id"] == "gratuit" or not plan.get("disponible"):
+        if plan["id"] not in PLANS_DISPONIBLES_WHATSAPP or not plan.get("disponible"):
             continue
         prix = f"{plan['prix_fcfa']:,} FCFA/mois".replace(",", " ") if plan.get("prix_fcfa") else "prix a venir"
         lignes.append(f"{plan['nom'].upper()} ({prix}) : " + ", ".join(plan["avantages"]))
     lignes.append("")
-    lignes.append("Pour confirmer, repondez : OUI STANDARD ou OUI EXPERT")
+    lignes.append("Pour confirmer, repondez : OUI STANDARD")
+    lignes.append("(La formule Expert Fiscal est disponible sur notre site web.)")
     return "\n".join(lignes)
 
 
@@ -1123,4 +1135,5 @@ if __name__ == "__main__":
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
 
