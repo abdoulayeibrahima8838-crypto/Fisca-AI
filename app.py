@@ -373,6 +373,7 @@ def reponse_abonnement_whatsapp(texte, numero, user):
     lignes.append("")
     lignes.append("Pour confirmer, repondez : OUI STANDARD")
     lignes.append("(La formule Expert Fiscal est disponible sur notre site web : https://fisca-ai.onrender.com)")
+    return "\n".join(lignes)
 
 
 def utilisateur_courant():
@@ -1134,5 +1135,6 @@ if __name__ == "__main__":
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
 
 
