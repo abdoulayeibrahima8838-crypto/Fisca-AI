@@ -27,6 +27,7 @@
   .logo-sub{font-size:9.5px; color:var(--or); letter-spacing:1.4px; text-transform:uppercase; margin-top:-2px; font-weight:600;}
   .version-pill{background: rgba(201,162,75,0.14); border:1px solid rgba(201,162,75,0.4); color: var(--or); font-size:11px; font-weight:600; letter-spacing:0.4px; padding:4px 12px; border-radius:20px; text-transform:uppercase; white-space:nowrap; flex-shrink:0;}
   .logout-btn{background:none; border:none; color:var(--cream); opacity:0.7; cursor:pointer; font-size:12px; text-decoration:underline; flex-shrink:0;}
+  .new-chat-btn{background:none; border:none; color:var(--cream); cursor:pointer; padding:4px; display:flex; align-items:center; opacity:0.9; flex-shrink:0;}
 
   .menu-btn{background:none; border:none; color:var(--cream); cursor:pointer; padding:4px; display:flex; align-items:center; opacity:0.9; flex-shrink:0;}
   .drawer-overlay{position:absolute; inset:0; background:rgba(0,0,0,0.4); z-index:40; display:none;}
@@ -38,6 +39,7 @@
   .drawer-item{display:flex; align-items:center; gap:12px; padding:13px 18px; background:none; border:none; color:var(--cream); font-size:14.5px; text-align:left; cursor:pointer; width:100%; font-family:'Inter',sans-serif;}
   .drawer-item:hover{background:rgba(255,255,255,0.06);}
   .drawer-item .icon{width:20px; text-align:center; opacity:0.85;}
+  .drawer-item.highlight{color:var(--or); font-weight:600;}
 
   .sub-screen{display:none; flex-direction:column; position:absolute; inset:0; z-index:30; background:var(--paper);}
   .sub-screen.open{display:flex;}
@@ -48,9 +50,10 @@
 
   .hist-group-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#8A8071; margin:16px 0 8px;}
   .hist-group-title:first-child{margin-top:0;}
-  .hist-item{background:#fff; border:1px solid #E5DCC7; border-radius:11px; padding:12px 14px; margin-bottom:8px;}
-  .hist-item .hq{font-size:13.5px; font-weight:600; color:var(--marine); margin-bottom:4px;}
-  .hist-item .ha{font-size:12.5px; color:#5C6B70; line-height:1.4;}
+  .hist-item-btn{display:block; width:100%; text-align:left; background:#fff; border:1px solid #E5DCC7; border-radius:11px; padding:13px 14px; margin-bottom:8px; cursor:pointer; font-family:'Inter',sans-serif;}
+  .hist-item-btn:hover{border-color:var(--orange); background:#FBF3EA;}
+  .hist-item-btn .hq{font-size:13.5px; font-weight:600; color:var(--marine); display:flex; align-items:center; gap:8px;}
+  .hist-item-btn .hq::before{content:"💬"; font-size:13px;}
   .hist-empty, .lib-empty{text-align:center; color:#8A8071; font-size:13px; padding:40px 20px;}
 
   .lib-card{background:#fff; border:1px solid #E5DCC7; border-radius:13px; padding:16px; margin-bottom:12px;}
@@ -218,6 +221,9 @@
       </div>
     </div>
     <div class="version-pill">Phase test</div>
+    <button class="new-chat-btn hidden" id="newChatBtn" aria-label="Nouvelle conversation" title="Nouvelle conversation">
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
     <button class="logout-btn hidden" id="logoutBtn">Déconnexion</button>
   </div>
 
@@ -305,6 +311,7 @@
     <div class="drawer-header">
       <div class="logo-text">Fisca AI</div>
     </div>
+    <button class="drawer-item highlight" id="menuNouvelleConversation"><span class="icon">＋</span> Nouvelle conversation</button>
     <button class="drawer-item" id="menuHistorique"><span class="icon">🕘</span> Historique</button>
     <button class="drawer-item" id="menuBibliotheque"><span class="icon">📚</span> Bibliothèque</button>
     <button class="drawer-item" id="menuCalendrier"><span class="icon">📅</span> Calendrier fiscal</button>
@@ -506,14 +513,18 @@
   const quotaBar = document.getElementById('quotaBar');
   const inputField = document.getElementById('inputField');
   const sendBtn = document.getElementById('sendBtn');
+  const newChatBtn = document.getElementById('newChatBtn');
   let questionsRestantes = 5;
+  let nomUtilisateurCourant = '';
 
   function startChat(nom){
+    nomUtilisateurCourant = nom || '';
     authScreen.style.display = 'none';
     chatScreen.classList.remove('hidden');
     chatScreen.style.display = 'flex';
     logoutBtn.classList.remove('hidden');
     menuBtn.classList.remove('hidden');
+    newChatBtn.classList.remove('hidden');
     welcomeName.textContent = nom ? (', ' + nom) : '';
     refreshSession();
   }
@@ -537,6 +548,12 @@
 
   function updateQuotaBar(){
     quotaBar.innerHTML = 'Il vous reste <b>' + questionsRestantes + '</b> question' + (questionsRestantes===1?'':'s') + " aujourd'hui — plan Gratuit";
+  }
+
+  function afficherEcranAccueil(){
+    chat.innerHTML = '';
+    chat.appendChild(welcome);
+    document.getElementById('sourceName').textContent = 'Comprendre la Facture Certifiée';
   }
 
   function addMessage(text, isUser, meta){
@@ -616,6 +633,14 @@
   });
   inputField.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') sendBtn.click(); });
 
+  async function demarrerNouvelleConversation(){
+    try{
+      await fetch('/api/conversation/nouvelle', { method:'POST' });
+    } catch(e){}
+    afficherEcranAccueil();
+  }
+  newChatBtn.addEventListener('click', demarrerNouvelleConversation);
+
   // Verifier si deja connecte au chargement
   (async ()=>{
     const res = await fetch('/api/session');
@@ -639,7 +664,12 @@
     logoutBtn.click();
   });
 
-  // ===== ECRAN HISTORIQUE =====
+  document.getElementById('menuNouvelleConversation').addEventListener('click', ()=>{
+    closeDrawer();
+    demarrerNouvelleConversation();
+  });
+
+  // ===== ECRAN HISTORIQUE (par conversation/sujet) =====
   const historyScreen = document.getElementById('historyScreen');
   const historyBody = document.getElementById('historyBody');
 
@@ -651,22 +681,41 @@
       const res = await fetch('/api/historique');
       const data = await res.json();
       if(!data.historique || data.historique.length === 0){
-        historyBody.innerHTML = '<div class="hist-empty">Vous n\'avez pas encore posé de question.</div>';
+        historyBody.innerHTML = '<div class="hist-empty">Vous n\'avez pas encore de conversation.</div>';
         return;
       }
       let html = '';
       data.historique.forEach(groupe=>{
         html += '<div class="hist-group-title">' + groupe.groupe + '</div>';
-        groupe.questions.forEach(q=>{
-          html += '<div class="hist-item"><div class="hq">' + escapeHtml(q.question) + '</div><div class="ha">' + escapeHtml(q.reponse.slice(0,140)) + (q.reponse.length>140?'…':'') + '</div></div>';
+        groupe.conversations.forEach(c=>{
+          html += '<button class="hist-item-btn" data-conversation="' + c.id + '"><div class="hq">' + escapeHtml(c.titre) + '</div></button>';
         });
       });
       historyBody.innerHTML = html;
+      document.querySelectorAll('.hist-item-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=> ouvrirConversation(btn.dataset.conversation));
+      });
     } catch(e){
       historyBody.innerHTML = '<div class="hist-empty">Impossible de charger l\'historique.</div>';
     }
   });
   document.getElementById('historyBack').addEventListener('click', ()=> historyScreen.classList.remove('open'));
+
+  async function ouvrirConversation(id){
+    try{
+      const res = await fetch('/api/conversation/' + id);
+      const data = await res.json();
+      if(!res.ok){ return; }
+      historyScreen.classList.remove('open');
+      if(welcome && welcome.parentElement){ welcome.remove(); }
+      chat.innerHTML = '';
+      data.questions.forEach(q=>{
+        addMessage(q.question, true);
+        addMessage(q.reponse, false, { source: q.source, verified: q.trouve, id_question: q.id });
+      });
+      document.getElementById('sourceName').textContent = data.titre;
+    } catch(e){}
+  }
 
   // ===== ECRAN BIBLIOTHEQUE / BOUTIQUE =====
   const libraryScreen = document.getElementById('libraryScreen');
@@ -931,6 +980,4 @@
 
 </body>
 </html>
-
-
 
