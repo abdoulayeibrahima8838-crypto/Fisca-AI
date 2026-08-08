@@ -339,6 +339,55 @@ def conversation_pour_question_web(user_id):
     return nouvelle_id
 
 
+def migrer_anciennes_questions():
+    """Rattache les questions posees AVANT l'introduction des conversations
+    (conversation_id encore NULL) a une conversation de regroupement par
+    utilisateur, intitulee 'Questions precedentes' - avec les VRAIES
+    dates d'origine conservees (pas la date du jour), pour qu'elles
+    reapparaissent a leur juste place chronologique dans l'historique.
+
+    IDEMPOTENTE PAR CONCEPTION : elle agit uniquement sur les lignes ou
+    conversation_id EST ENCORE NULL. Une fois migrees, ces lignes ne le
+    sont plus - un redemarrage ulterieur (meme apres de futures
+    retouches du code) ne retrouve donc plus rien a traiter et ne fait
+    rien, sans risque de doublons ni de re-migration. Aucun indicateur
+    "deja fait" a maintenir separement : l'etat de la base fait foi."""
+    if not DATABASE_URL:
+        return
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = conn.cursor()
+
+    cur.execute("SELECT DISTINCT user_id FROM questions_log WHERE conversation_id IS NULL")
+    utilisateurs_concernes = [ligne["user_id"] for ligne in cur.fetchall()]
+
+    for user_id in utilisateurs_concernes:
+        cur.execute(
+            """SELECT MIN(cree_le) AS premiere, MAX(cree_le) AS derniere
+               FROM questions_log WHERE conversation_id IS NULL AND user_id = %s""",
+            (user_id,),
+        )
+        bornes = cur.fetchone()
+        cur.execute(
+            """INSERT INTO conversations (user_id, titre, cree_le, derniere_activite)
+               VALUES (%s, %s, %s, %s) RETURNING id""",
+            (user_id, "Questions précédentes", bornes["premiere"], bornes["derniere"]),
+        )
+        conversation_id = cur.fetchone()["id"]
+        cur.execute(
+            "UPDATE questions_log SET conversation_id = %s WHERE conversation_id IS NULL AND user_id = %s",
+            (conversation_id, user_id),
+        )
+
+    if utilisateurs_concernes:
+        conn.commit()
+        print(
+            f"[Fisca AI] Migration historique : {len(utilisateurs_concernes)} "
+            "utilisateur(s) - anciennes questions regroupees dans 'Questions précédentes'."
+        )
+    cur.close()
+    conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Reinitialisation de mot de passe - solution temporaire "manuelle" en
 # attendant que l'envoi automatique par WhatsApp Business API soit pret
@@ -1323,12 +1372,14 @@ def sante():
 
 with app.app_context():
     init_db()
+    migrer_anciennes_questions()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
 
 
 
