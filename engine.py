@@ -62,6 +62,14 @@ SYSTEM_PROMPT = (
     "essai, une histoire, un poeme, du code, ou tout contenu sans lien "
     "avec ce perimetre, refuse poliment et rappelle ton role, sans "
     "produire le contenu demande.\n\n"
+    "REGLE DE CONTINUITE DE CONVERSATION :\n"
+    "- Si un historique d'echanges precedents t'est fourni, utilise-le "
+    "pour comprendre le contexte des questions courtes ou ambigues (ex. "
+    "'et mes avantages ?' apres une question sur un metier precis fait "
+    "reference a ce meme metier). Ne mentionne jamais explicitement que "
+    "tu 'te souviens' ou que tu 'utilises l'historique' - reponds "
+    "naturellement, comme le ferait une personne qui suit la "
+    "conversation.\n\n"
     "REGLE DE RENVOI VERS LES SOURCES COMPLETES :\n"
     "- Termine chaque reponse par UNE SEULE courte phrase de renvoi (pas "
     "plus). Si la question porte specifiquement sur la facture "
@@ -92,16 +100,32 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_TIMEOUT_SECONDS = 12
 
 
-def repondre_gemini(question_brute):
+def _construire_contenus_gemini(question_brute, historique):
+    """Construit la liste de tours de conversation attendue par Gemini :
+    chaque echange precedent (question utilisateur + reponse du modele),
+    suivi de la nouvelle question. Sans historique, se comporte comme
+    avant (une seule question)."""
+    contenus = []
+    for question_precedente, reponse_precedente in historique or []:
+        contenus.append(genai_types.Content(role="user", parts=[genai_types.Part(text=question_precedente)]))
+        contenus.append(genai_types.Content(role="model", parts=[genai_types.Part(text=reponse_precedente)]))
+    contenus.append(genai_types.Content(role="user", parts=[genai_types.Part(text=question_brute)]))
+    return contenus
+
+
+def repondre_gemini(question_brute, historique=None):
     """Tente une reponse via Gemini File Search. Retourne None si
     indisponible pour une raison quelconque - l'appelant bascule alors
-    sur OpenAI, puis sur le moteur local."""
+    sur OpenAI, puis sur le moteur local. 'historique' est une liste
+    optionnelle de tuples (question, reponse) des echanges precedents de
+    la MEME conversation, transmise pour que Gemini comprenne les
+    questions de suivi ('et mes avantages ?')."""
     if not _gemini_client or not GEMINI_FILE_SEARCH_STORE:
         return None
     try:
         response = _gemini_client.models.generate_content(
             model=GEMINI_MODEL,
-            contents=question_brute,
+            contents=_construire_contenus_gemini(question_brute, historique),
             config=genai_types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 max_output_tokens=2048,
@@ -130,6 +154,36 @@ def repondre_gemini(question_brute):
         return None
 
 
+def generer_titre_conversation(question, reponse):
+    """Genere un titre court (4-6 mots) resumant le sujet d'une nouvelle
+    conversation, a partir de son tout premier echange. Utilise pour
+    l'affichage dans l'ecran Historique. En cas d'echec ou d'absence de
+    Gemini, retombe simplement sur le debut de la question - jamais
+    d'erreur bloquante pour l'utilisateur."""
+    repli = question.strip()[:40] or "Discussion"
+    if not _gemini_client:
+        return repli
+    try:
+        response = _gemini_client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=f"Question : {question}\nReponse : {reponse[:400]}",
+            config=genai_types.GenerateContentConfig(
+                system_instruction=(
+                    "Genere un titre tres court (4 a 6 mots maximum) resumant "
+                    "le sujet fiscal de cet echange. Reponds uniquement avec "
+                    "le titre lui-meme, sans guillemets, sans ponctuation "
+                    "finale, sans prefixe."
+                ),
+                max_output_tokens=30,
+            ),
+        )
+        titre = (getattr(response, "text", "") or "").strip().strip('"').strip("'")
+        return titre[:60] if titre else repli
+    except Exception as e:
+        print(f"[Fisca AI] Echec de generation du titre ({type(e).__name__}: {e}) - repli sur la question.")
+        return repli
+
+
 # ---------------------------------------------------------------------------
 # Partie IA n°2 - OpenAI (SECOURS si Gemini indisponible/en echec)
 # ---------------------------------------------------------------------------
@@ -144,16 +198,19 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 OPENAI_TIMEOUT_SECONDS = 12
 
 
-def repondre_ia(question_brute):
+def repondre_ia(question_brute, historique=None):
     if not _client or not OPENAI_VECTOR_STORE_ID:
         return None
     try:
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        for question_precedente, reponse_precedente in historique or []:
+            messages.append({"role": "user", "content": question_precedente})
+            messages.append({"role": "assistant", "content": reponse_precedente})
+        messages.append({"role": "user", "content": question_brute})
+
         response = _client.responses.create(
             model=OPENAI_MODEL,
-            input=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": question_brute},
-            ],
+            input=messages,
             tools=[{"type": "file_search", "vector_store_ids": [OPENAI_VECTOR_STORE_ID], "max_num_results": 4}],
             max_output_tokens=2048,
             timeout=OPENAI_TIMEOUT_SECONDS,
@@ -506,15 +563,23 @@ def repondre_locale(question_brute):
     }
 
 
-def repondre(question_brute):
+def repondre(question_brute, historique=None):
     """Ordre de priorite : Gemini (File Search) -> OpenAI (File Search)
     -> moteur local. Chaque etage n'est tente que si le precedent est
     indisponible ou echoue - jamais d'erreur bloquante pour
-    l'utilisateur, quel que soit le nombre d'IA configurees ou non."""
-    resultat = repondre_gemini(question_brute)
+    l'utilisateur, quel que soit le nombre d'IA configurees ou non.
+
+    'historique' est une liste optionnelle de tuples (question, reponse)
+    des echanges precedents de la meme conversation - transmise aux
+    moteurs IA pour la continuite (voir REGLE DE CONTINUITE DE
+    CONVERSATION dans le prompt systeme). Le moteur local, purement
+    base sur des mots-cles, ignore ce parametre : il n'a pas la
+    capacite de raisonner sur un contexte de conversation."""
+    resultat = repondre_gemini(question_brute, historique)
     if resultat is not None:
         return resultat
-    resultat = repondre_ia(question_brute)
+    resultat = repondre_ia(question_brute, historique)
     if resultat is not None:
         return resultat
     return repondre_locale(question_brute)
+
