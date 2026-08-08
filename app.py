@@ -22,7 +22,7 @@ from flask import Flask, g, jsonify, request, send_from_directory, session
 from cache_data import DOCUMENT_ACTIF, SUGGESTIONS
 from catalogue import CATALOGUE, DOCUMENTS_TELECHARGEABLES, ABONNEMENTS, WHATSAPP_NUMERO, lien_whatsapp_commande
 from payments import initier_paiement
-from engine import repondre
+from engine import repondre, generer_titre_conversation
 from calendrier_fiscal_data import get_calendrier_par_mois, DELAIS_EVENEMENTS, MOIS_LABELS
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -169,6 +169,14 @@ def init_db():
             cree_le TIMESTAMP NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS conversations (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            titre TEXT,
+            cree_le TIMESTAMP NOT NULL,
+            derniere_activite TIMESTAMP NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS questions_log (
             id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL REFERENCES users(id),
@@ -220,6 +228,12 @@ def init_db():
         );
         """
     )
+    # Ajout de la colonne conversation_id sur une base deja existante -
+    # ALTER ... IF NOT EXISTS pour ne jamais planter sur une base qui a
+    # deja ete initialisee avant l'ajout des conversations.
+    cur.execute(
+        "ALTER TABLE questions_log ADD COLUMN IF NOT EXISTS conversation_id INTEGER REFERENCES conversations(id)"
+    )
     conn.commit()
     cur.close()
     conn.close()
@@ -228,6 +242,101 @@ def init_db():
 
 def hacher_mot_de_passe(mot_de_passe, sel):
     return hashlib.pbkdf2_hmac("sha256", mot_de_passe.encode("utf-8"), sel.encode("utf-8"), 100_000).hex()
+
+
+# ---------------------------------------------------------------------------
+# Conversations - regroupement des questions par sujet, avec une memoire
+# de continuite pour l'IA. Deux modes :
+#   - continuite AUTOMATIQUE (chat par defaut) : si la derniere question
+#     de l'utilisateur date de moins de DUREE_CONTINUITE_CONVERSATION_MINUTES,
+#     on reste dans la meme conversation, avec une fenetre de contexte
+#     courte (PROFONDEUR_CONTEXTE_DEFAUT) ;
+#   - reprise EXPLICITE depuis l'historique : la conversation choisie
+#     reste active quelle que soit son anciennete, avec une fenetre de
+#     contexte plus large (PROFONDEUR_CONTEXTE_HISTORIQUE), le temps de
+#     vraiment "reprendre le fil".
+# Le bouton "Nouvelle conversation" force toujours une conversation
+# vierge, sans aucune memoire.
+# ---------------------------------------------------------------------------
+DUREE_CONTINUITE_CONVERSATION_MINUTES = 60
+PROFONDEUR_CONTEXTE_DEFAUT = 3
+PROFONDEUR_CONTEXTE_HISTORIQUE = 8
+
+
+def conversation_active(user_id, forcer_nouvelle=False):
+    """Retourne (conversation_id, nouvelle) : reutilise la derniere
+    conversation de l'utilisateur si elle est encore dans la fenetre de
+    continuite, sinon (ou si une nouvelle est explicitement demandee)
+    en cree une."""
+    db = get_db()
+    cur = db.cursor()
+    if not forcer_nouvelle:
+        cur.execute(
+            """SELECT id FROM conversations
+               WHERE user_id = %s AND derniere_activite > %s
+               ORDER BY derniere_activite DESC LIMIT 1""",
+            (user_id, datetime.now() - timedelta(minutes=DUREE_CONTINUITE_CONVERSATION_MINUTES)),
+        )
+        existante = cur.fetchone()
+        if existante:
+            return existante["id"], False
+
+    cur.execute(
+        "INSERT INTO conversations (user_id, titre, cree_le, derniere_activite) VALUES (%s, NULL, %s, %s) RETURNING id",
+        (user_id, datetime.now(), datetime.now()),
+    )
+    nouvelle = cur.fetchone()
+    db.commit()
+    return nouvelle["id"], True
+
+
+def contexte_conversation(conversation_id, profondeur):
+    """Renvoie les 'profondeur' derniers echanges (question, reponse) de
+    cette conversation, en ordre chronologique - c'est ce qui est
+    transmis a l'IA pour la continuite."""
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """SELECT question_brute, reponse FROM questions_log
+           WHERE conversation_id = %s ORDER BY cree_le DESC LIMIT %s""",
+        (conversation_id, profondeur),
+    )
+    lignes = cur.fetchall()
+    return [(ligne["question_brute"], ligne["reponse"]) for ligne in reversed(lignes)]
+
+
+def toucher_conversation(conversation_id):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("UPDATE conversations SET derniere_activite = %s WHERE id = %s", (datetime.now(), conversation_id))
+    db.commit()
+
+
+def conversation_pour_question_web(user_id):
+    """Determine la conversation a utiliser pour une nouvelle question
+    posee depuis le SITE WEB, en tenant compte de la session (conversation
+    reprise explicitement depuis l'historique, ou continuite normale)."""
+    conversation_id = session.get("conversation_id")
+    conv = None
+    if conversation_id:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT user_id, derniere_activite FROM conversations WHERE id = %s", (conversation_id,))
+        conv = cur.fetchone()
+        if not conv or conv["user_id"] != user_id:
+            conversation_id = None
+            conv = None
+
+    if conversation_id and session.get("contexte_profond"):
+        return conversation_id  # reprise explicite depuis l'historique : on garde, peu importe l'anciennete
+
+    if conversation_id and conv and (datetime.now() - conv["derniere_activite"]) < timedelta(minutes=DUREE_CONTINUITE_CONVERSATION_MINUTES):
+        return conversation_id  # continuite normale, toujours dans la fenetre de temps
+
+    nouvelle_id, _ = conversation_active(user_id, forcer_nouvelle=True)
+    session["conversation_id"] = nouvelle_id
+    session["contexte_profond"] = False
+    return nouvelle_id
 
 
 # ---------------------------------------------------------------------------
@@ -476,6 +585,63 @@ def etat_session():
     )
 
 
+@app.route("/api/conversation/nouvelle", methods=["POST"])
+def nouvelle_conversation():
+    """Force le demarrage d'une conversation vierge, sans aucune memoire
+    des echanges precedents - appele par le bouton 'Nouvelle conversation'."""
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+    conversation_id, _ = conversation_active(user["id"], forcer_nouvelle=True)
+    session["conversation_id"] = conversation_id
+    session["contexte_profond"] = False
+    return jsonify({"ok": True, "conversation_id": conversation_id})
+
+
+@app.route("/api/conversation/<int:conversation_id>", methods=["GET"])
+def ouvrir_conversation(conversation_id):
+    """Recharge une conversation passee depuis l'historique, et la
+    marque comme conversation active avec une fenetre de contexte plus
+    profonde (reprise explicite d'un sujet)."""
+    user = utilisateur_courant()
+    if not user:
+        return jsonify({"erreur": "Non connecte."}), 401
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id, titre, user_id FROM conversations WHERE id = %s", (conversation_id,))
+    conv = cur.fetchone()
+    if not conv or conv["user_id"] != user["id"]:
+        return jsonify({"erreur": "Conversation introuvable."}), 404
+
+    cur.execute(
+        """SELECT id, question_brute, reponse, source, niveau, cree_le
+           FROM questions_log WHERE conversation_id = %s ORDER BY cree_le ASC""",
+        (conversation_id,),
+    )
+    lignes = cur.fetchall()
+
+    session["conversation_id"] = conversation_id
+    session["contexte_profond"] = True
+    toucher_conversation(conversation_id)
+
+    return jsonify(
+        {
+            "titre": conv["titre"] or "Discussion",
+            "questions": [
+                {
+                    "id": ligne["id"],
+                    "question": ligne["question_brute"],
+                    "reponse": ligne["reponse"],
+                    "source": ligne["source"],
+                    "trouve": ligne["niveau"] == 1,
+                }
+                for ligne in lignes
+            ],
+        }
+    )
+
+
 @app.route("/api/question", methods=["POST"])
 def poser_question():
     user = utilisateur_courant()
@@ -492,16 +658,21 @@ def poser_question():
     if not illimite and posees >= QUOTA_GRATUIT_PAR_JOUR:
         return jsonify({"erreur": "quota_atteint", "message": "Vous avez atteint votre limite de questions pour aujourd'hui."}), 429
 
-    resultat = repondre(texte)
+    conversation_id = conversation_pour_question_web(user["id"])
+    profondeur = PROFONDEUR_CONTEXTE_HISTORIQUE if session.get("contexte_profond") else PROFONDEUR_CONTEXTE_DEFAUT
+    historique = contexte_conversation(conversation_id, profondeur)
+
+    resultat = repondre(texte, historique=historique)
 
     db = get_db()
     cur = db.cursor()
     cur.execute(
         """INSERT INTO questions_log
-           (user_id, question_brute, question_comprise, reponse, source, niveau, cree_le)
-           VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+           (user_id, conversation_id, question_brute, question_comprise, reponse, source, niveau, cree_le)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
         (
             user["id"],
+            conversation_id,
             texte,
             resultat["question_comprise"],
             resultat["reponse"],
@@ -512,6 +683,14 @@ def poser_question():
     )
     id_question = cur.fetchone()["id"]
     db.commit()
+    toucher_conversation(conversation_id)
+
+    # Titre genere une seule fois, apres le tout premier echange de la
+    # conversation (historique vide = c'etait le premier message).
+    if not historique:
+        titre = generer_titre_conversation(texte, resultat["reponse"])
+        cur.execute("UPDATE conversations SET titre = %s WHERE id = %s AND titre IS NULL", (titre, conversation_id))
+        db.commit()
 
     return jsonify(
         {
@@ -607,6 +786,10 @@ def calendrier_fiscal():
 
 @app.route("/api/historique", methods=["GET"])
 def historique():
+    """Liste les conversations de l'utilisateur (pas les questions
+    individuelles), groupees par periode - chaque entree est cliquable
+    depuis l'interface pour reprendre le fil de cette conversation
+    precise."""
     user = utilisateur_courant()
     if not user:
         return jsonify({"erreur": "Non connecte."}), 401
@@ -614,9 +797,13 @@ def historique():
     db = get_db()
     cur = db.cursor()
     cur.execute(
-        """SELECT id, question_brute, reponse, source, niveau, cree_le
-           FROM questions_log WHERE user_id = %s
-           ORDER BY cree_le DESC LIMIT 100""",
+        """SELECT c.id, c.titre, c.derniere_activite,
+                  (SELECT question_brute FROM questions_log
+                   WHERE conversation_id = c.id ORDER BY cree_le ASC LIMIT 1) AS premiere_question
+           FROM conversations c
+           WHERE c.user_id = %s
+             AND EXISTS (SELECT 1 FROM questions_log WHERE conversation_id = c.id)
+           ORDER BY c.derniere_activite DESC LIMIT 50""",
         (user["id"],),
     )
     lignes = cur.fetchall()
@@ -624,8 +811,8 @@ def historique():
     aujourdhui = date.today()
     groupes = {}
     for ligne in lignes:
-        cree_le = ligne["cree_le"]
-        jour = cree_le.date() if hasattr(cree_le, "date") else aujourdhui
+        derniere_activite = ligne["derniere_activite"]
+        jour = derniere_activite.date() if hasattr(derniere_activite, "date") else aujourdhui
         if jour == aujourdhui:
             cle = "Aujourd'hui"
         elif (aujourdhui - jour).days == 1:
@@ -634,19 +821,17 @@ def historique():
             cle = "Cette semaine"
         else:
             cle = "Plus ancien"
+        titre_affiche = ligne["titre"] or (ligne["premiere_question"] or "Discussion")[:40]
         groupes.setdefault(cle, []).append(
             {
                 "id": ligne["id"],
-                "question": ligne["question_brute"],
-                "reponse": ligne["reponse"],
-                "source": ligne["source"],
-                "trouve": ligne["niveau"] == 1,
-                "date": cree_le.isoformat() if hasattr(cree_le, "isoformat") else str(cree_le),
+                "titre": titre_affiche,
+                "date": derniere_activite.isoformat() if hasattr(derniere_activite, "isoformat") else str(derniere_activite),
             }
         )
 
     ordre = ["Aujourd'hui", "Hier", "Cette semaine", "Plus ancien"]
-    resultat = [{"groupe": g, "questions": groupes[g]} for g in ordre if g in groupes]
+    resultat = [{"groupe": g, "conversations": groupes[g]} for g in ordre if g in groupes]
     return jsonify({"historique": resultat})
 
 
@@ -1096,20 +1281,29 @@ def whatsapp_message_recu():
         )
         return jsonify({"ok": True})
 
-    resultat = repondre(texte)
+    # Meme logique de continuite que le site web, en plus simple : sur
+    # WhatsApp il n'y a ni bouton "nouvelle conversation" ni historique
+    # navigable, donc on se contente toujours de la continuite
+    # automatique (60 minutes, fenetre courte) - pas de reprise
+    # explicite possible depuis WhatsApp pour l'instant.
+    conversation_id, _ = conversation_active(user["id"])
+    historique_conversation = contexte_conversation(conversation_id, PROFONDEUR_CONTEXTE_DEFAUT)
+
+    resultat = repondre(texte, historique=historique_conversation)
 
     db = get_db()
     cur = db.cursor()
     cur.execute(
         """INSERT INTO questions_log
-           (user_id, question_brute, question_comprise, reponse, source, niveau, cree_le)
-           VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+           (user_id, conversation_id, question_brute, question_comprise, reponse, source, niveau, cree_le)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
         (
-            user["id"], texte, resultat["question_comprise"], resultat["reponse"],
+            user["id"], conversation_id, texte, resultat["question_comprise"], resultat["reponse"],
             resultat["source"], resultat["niveau"], datetime.now(),
         ),
     )
     db.commit()
+    toucher_conversation(conversation_id)
 
     envoyer_message_whatsapp(numero_expediteur, resultat["reponse"])
     return jsonify({"ok": True})
