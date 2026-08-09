@@ -41,6 +41,37 @@ WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
 WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "fisca-ai-verify")
 WHATSAPP_API_VERSION = "v21.0"
 
+# Secret d'APPLICATION Meta (different du token d'acces) - permet de
+# verifier que chaque requete recue sur /webhook/whatsapp vient bien de
+# Meta, et pas d'un tiers qui aurait devine l'URL du webhook. Se trouve
+# dans Meta for Developers > ton app > Parametres de l'app > General >
+# "App Secret". Sans lui, la verification est desactivee (un
+# avertissement s'affiche au demarrage, comme pour FISCA_AI_SECRET).
+WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET")
+if not WHATSAPP_APP_SECRET:
+    print(
+        "ATTENTION : WHATSAPP_APP_SECRET n'est pas defini sur Render. "
+        "Les requetes recues sur /webhook/whatsapp ne sont pas verifiees "
+        "comme venant reellement de Meta. Ajoute cette variable "
+        "(Meta for Developers > App Secret) pour securiser le webhook."
+    )
+
+
+def signature_whatsapp_valide(corps_brut, signature_recue):
+    """Verifie la signature HMAC-SHA256 que Meta ajoute a chaque requete
+    webhook, calculee avec l'App Secret. Sans WHATSAPP_APP_SECRET
+    configure, laisse passer (phase de test) - l'avertissement au
+    demarrage signale ce manque."""
+    if not WHATSAPP_APP_SECRET:
+        return True
+    if not signature_recue or not signature_recue.startswith("sha256="):
+        return False
+    signature_attendue = hmac.new(
+        WHATSAPP_APP_SECRET.encode("utf-8"), corps_brut, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(signature_recue[7:], signature_attendue)
+
+
 COMPTES_ILLIMITES = {
     c.strip().lower()
     for c in os.environ.get("COMPTES_ILLIMITES", "").split(",")
@@ -131,6 +162,47 @@ def _reinitialisation_bloquee(contact):
 
 def _enregistrer_demande_reinitialisation(contact):
     _demandes_reinitialisation.setdefault(contact, []).append(time.time())
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting general - protege les routes sensibles contre l'abus (bots,
+# scripts), independamment du quota metier de 5 questions/jour qui, lui,
+# limite seulement le TOTAL journalier sans limiter le RYTHME d'envoi.
+# Meme principe de stockage en memoire que les blocages ci-dessus.
+# ---------------------------------------------------------------------------
+_requetes_recentes = {}  # cle -> [timestamps]
+
+
+def requete_trop_frequente(cle, max_requetes, fenetre_secondes):
+    maintenant = time.time()
+    historique = _requetes_recentes.get(cle, [])
+    historique = [t for t in historique if maintenant - t < fenetre_secondes]
+    if len(historique) >= max_requetes:
+        _requetes_recentes[cle] = historique
+        return True
+    historique.append(maintenant)
+    _requetes_recentes[cle] = historique
+    return False
+
+
+def ip_client():
+    """Recupere l'adresse IP reelle du visiteur - Render (comme la plupart
+    des hebergeurs) place le vrai client derriere un proxy, qui transmet
+    l'IP d'origine dans l'en-tete X-Forwarded-For."""
+    xff = request.headers.get("X-Forwarded-For", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.remote_addr or "inconnu"
+
+
+MAX_QUESTIONS_PAR_MINUTE_PAR_IP = 10
+MAX_INSCRIPTIONS_PAR_HEURE_PAR_IP = 5
+
+# Longueurs maximales acceptees sur les champs texte - empeche l'envoi de
+# textes demesures qui couteraient cher en appels IA ou surchargeraient
+# la base de donnees, sans jamais geiner un usage normal.
+LONGUEUR_MAX_QUESTION = 500
+LONGUEUR_MAX_NOM = 100
 
 
 def get_db():
@@ -556,6 +628,9 @@ def questions_posees_aujourdhui(user_id):
 
 @app.route("/api/inscription", methods=["POST"])
 def inscription():
+    if requete_trop_frequente(("inscription", ip_client()), MAX_INSCRIPTIONS_PAR_HEURE_PAR_IP, 3600):
+        return jsonify({"erreur": "Trop de comptes crees recemment depuis cette connexion. Reessayez plus tard."}), 429
+
     data = request.get_json(silent=True) or {}
     nom = (data.get("nom") or "").strip()
     contact = (data.get("contact") or "").strip().lower()
@@ -563,6 +638,8 @@ def inscription():
 
     if not nom or not contact or len(mot_de_passe) < MOT_DE_PASSE_LONGUEUR_MIN:
         return jsonify({"erreur": f"Nom, contact et mot de passe ({MOT_DE_PASSE_LONGUEUR_MIN} caracteres minimum) sont requis."}), 400
+    if len(nom) > LONGUEUR_MAX_NOM:
+        return jsonify({"erreur": f"Le nom ne peut pas depasser {LONGUEUR_MAX_NOM} caracteres."}), 400
 
     db = get_db()
     cur = db.cursor()
@@ -697,10 +774,15 @@ def poser_question():
     if not user:
         return jsonify({"erreur": "Vous devez etre connecte pour poser une question."}), 401
 
+    if requete_trop_frequente(("question", ip_client()), MAX_QUESTIONS_PAR_MINUTE_PAR_IP, 60):
+        return jsonify({"erreur": "Trop de questions envoyees trop vite. Merci de patienter quelques instants."}), 429
+
     data = request.get_json(silent=True) or {}
     texte = (data.get("texte") or "").strip()
     if not texte:
         return jsonify({"erreur": "La question est vide."}), 400
+    if len(texte) > LONGUEUR_MAX_QUESTION:
+        return jsonify({"erreur": f"Question trop longue (maximum {LONGUEUR_MAX_QUESTION} caracteres)."}), 400
 
     posees = questions_posees_aujourdhui(user["id"])
     illimite = est_illimite(user)
@@ -911,6 +993,8 @@ def modifier_profil():
     nouveau_nom = (data.get("nom") or "").strip()
     if not nouveau_nom:
         return jsonify({"erreur": "Le nom ne peut pas etre vide."}), 400
+    if len(nouveau_nom) > LONGUEUR_MAX_NOM:
+        return jsonify({"erreur": f"Le nom ne peut pas depasser {LONGUEUR_MAX_NOM} caracteres."}), 400
     db = get_db()
     cur = db.cursor()
     cur.execute("UPDATE users SET nom = %s WHERE id = %s", (nouveau_nom, user["id"]))
@@ -1295,6 +1379,10 @@ def whatsapp_message_recu():
     Repond toujours 200 rapidement a Meta (sinon Meta considere l'appel
     en echec et reessaie en boucle), quel que soit ce qui se passe a
     l'interieur."""
+    if not signature_whatsapp_valide(request.get_data(), request.headers.get("X-Hub-Signature-256", "")):
+        print("[WhatsApp] Signature invalide - requete rejetee (ne provient probablement pas de Meta).")
+        return jsonify({"ok": True}), 200
+
     data = request.get_json(silent=True) or {}
 
     try:
@@ -1312,6 +1400,7 @@ def whatsapp_message_recu():
 
     if not texte:
         return jsonify({"ok": True})
+    texte = texte[:LONGUEUR_MAX_QUESTION]
 
     user = utilisateur_whatsapp(numero_expediteur)
 
@@ -1379,6 +1468,7 @@ if __name__ == "__main__":
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
 
 
 
