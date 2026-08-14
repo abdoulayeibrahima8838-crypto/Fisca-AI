@@ -205,6 +205,40 @@ LONGUEUR_MAX_QUESTION = 500
 LONGUEUR_MAX_NOM = 100
 
 
+# ---------------------------------------------------------------------------
+# Deduplication des messages WhatsApp - quand notre serveur met trop de
+# temps a repondre (appel a Gemini qui peut prendre plusieurs secondes),
+# Meta considere que la requete a echoue et renvoie le MEME message une
+# ou deux fois de plus. Sans protection, chaque renvoi est traite comme
+# une nouvelle question, et la personne recoit 2 ou 3 reponses pour une
+# seule question posee.
+#
+# Chaque message WhatsApp a un identifiant unique fourni par Meta
+# (message["id"]) - on le memorise pendant 10 minutes ; si le meme
+# identifiant revient dans cette fenetre, on l'ignore silencieusement
+# au lieu de le retraiter.
+# ---------------------------------------------------------------------------
+DUREE_MEMOIRE_MESSAGES_TRAITES_SECONDES = 10 * 60
+_messages_whatsapp_traites = {}  # message_id -> timestamp de traitement
+
+
+def message_whatsapp_deja_traite(message_id):
+    maintenant = time.time()
+    # Nettoyage des entrees expirees a chaque appel - evite une fuite
+    # memoire progressive sans avoir besoin d'une tache separee.
+    expires = [
+        mid for mid, t in _messages_whatsapp_traites.items()
+        if maintenant - t > DUREE_MEMOIRE_MESSAGES_TRAITES_SECONDES
+    ]
+    for mid in expires:
+        _messages_whatsapp_traites.pop(mid, None)
+
+    if message_id in _messages_whatsapp_traites:
+        return True
+    _messages_whatsapp_traites[message_id] = maintenant
+    return False
+
+
 def get_db():
     if "db" not in g:
         if not DATABASE_URL:
@@ -1394,9 +1428,18 @@ def whatsapp_message_recu():
             return jsonify({"ok": True})
         message = messages[0]
         numero_expediteur = message["from"]
+        message_id = message.get("id")
         texte = (message.get("text", {}) or {}).get("body", "").strip()
     except (KeyError, IndexError, TypeError):
         return jsonify({"ok": True})  # format inattendu, on ignore sans erreur
+
+    # Meta a pu renvoyer ce meme message parce que notre reponse
+    # precedente a mis trop de temps a arriver (appel Gemini/OpenAI
+    # potentiellement long) - on l'ignore silencieusement plutot que de
+    # generer une deuxieme (ou troisieme) reponse pour la meme question.
+    if message_id and message_whatsapp_deja_traite(message_id):
+        print(f"[WhatsApp] Message {message_id} deja traite - ignore (nouvel essai probable de Meta).")
+        return jsonify({"ok": True})
 
     if not texte:
         return jsonify({"ok": True})
