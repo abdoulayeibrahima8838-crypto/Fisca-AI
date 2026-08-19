@@ -63,12 +63,17 @@ SYSTEM_PROMPT = (
     "dieses #, pas de tirets de liste, pas de titres. Ecris uniquement "
     "en texte simple, en phrases et paragraphes courts, comme dans une "
     "conversation normale.\n"
-    "- Dis l'essentiel en peu de mots : une reponse fait normalement 3 a "
-    "6 phrases. Va au-dela uniquement si la question exige vraiment "
-    "plusieurs points distincts (ex. une liste de sanctions). Ta reponse "
-    "doit TOUJOURS etre complete et jamais coupee en plein milieu d'une "
-    "phrase ou d'une idee : mieux vaut etre bref des le depart que de "
-    "risquer d'etre interrompu.\n\n"
+    "- Tu dois TOUJOURS synthetiser l'information en une reponse "
+    "autonome et complete des le depart - jamais rediger un brouillon "
+    "detaille que tu comptes ensuite couper faute de place. Avant "
+    "d'ecrire, identifie mentalement l'essentiel : le fait principal, "
+    "l'article qui le fonde, et les conditions cles s'il y en a. "
+    "Laisse volontairement de cote les details secondaires plutot que "
+    "de risquer une reponse interrompue. Une reponse fait normalement "
+    "3 a 6 phrases ; va au-dela uniquement si la question exige "
+    "vraiment plusieurs points distincts (ex. une liste de sanctions). "
+    "Ta reponse doit TOUJOURS etre complete et jamais coupee en plein "
+    "milieu d'une phrase ou d'une idee.\n\n"
     "REGLE DE PERIMETRE STRICTE :\n"
     "- Tu ne repond qu'a des questions sur la fiscalite nigerienne et la "
     "facture certifiee. Si on te demande de rediger un texte long, un "
@@ -105,13 +110,16 @@ SYSTEM_PROMPT = (
 # 504 DEADLINE_EXCEEDED cote Google avant meme d'avoir laisse une chance
 # raisonnable a la recherche documentaire de se terminer.
 #
-# GEMINI_MAX_OUTPUT_TOKENS : 2048 -> 700. Fisca AI produit volontairement
-# des reponses courtes (3-6 phrases, voir SYSTEM_PROMPT) - autoriser un
-# maximum aussi eleve que 2048 tokens n'apportait rien, mais pouvait
-# allonger inutilement le temps de generation.
+# GEMINI_MAX_OUTPUT_TOKENS : 2048 -> 1500 (700 s'est revele trop serre en
+# pratique : une partie de ce budget de tokens est consommee par le
+# travail de recherche du File Search lui-meme, avant meme l'ecriture
+# de la reponse finale - a 700, les reponses se retrouvaient coupees en
+# plein milieu au lieu d'etre naturellement courtes comme demande dans
+# le SYSTEM_PROMPT). 1500 laisse une vraie marge de securite tout en
+# restant nettement en dessous de l'ancienne limite de 2048.
 # ---------------------------------------------------------------------------
 GEMINI_TIMEOUT_SECONDS = 25
-GEMINI_MAX_OUTPUT_TOKENS = 700
+GEMINI_MAX_OUTPUT_TOKENS = 1500
 OPENAI_TIMEOUT_SECONDS = 12
 
 # Bascule OpenAI - voir le commentaire d'architecture en tete de fichier.
