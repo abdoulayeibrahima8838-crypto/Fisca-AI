@@ -436,7 +436,7 @@ def hacher_mot_de_passe(mot_de_passe, sel):
 # ---------------------------------------------------------------------------
 DUREE_CONTINUITE_CONVERSATION_MINUTES = 60
 PROFONDEUR_CONTEXTE_DEFAUT = 3
-PROFONDEUR_CONTEXTE_HISTORIQUE = 8
+PROFONDEUR_CONTEXTE_HISTORIQUE = 5
 
 
 def conversation_active(user_id, forcer_nouvelle=False):
@@ -1581,6 +1581,7 @@ if __name__ == "__main__":
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
 
 
 
