@@ -84,20 +84,56 @@ SYSTEM_PROMPT = (
 )
 
 # ---------------------------------------------------------------------------
+# Delais maximum accordes a chaque etage IA, AVANT de basculer sur le
+# suivant. Definis ici, en haut du fichier, car ils sont utilises des
+# la creation du client Gemini juste en dessous.
+#
+# POURQUOI CETTE LIMITE EST CRITIQUE : sans elle, un appel Gemini lent
+# (charge du service, fichiers volumineux dans le File Search Store...)
+# pouvait rester bloque indefiniment. Gunicorn (le serveur qui fait
+# tourner Fisca AI) finit alors par tuer le processus de force au bout
+# de son propre delai ("WORKER TIMEOUT" dans les logs Render) - ce qui
+# coupe la connexion brutalement cote utilisateur, AVANT que le filet de
+# securite prevu (bascule vers OpenAI, puis vers le moteur local) ait la
+# moindre chance de se declencher.
+#
+# En fixant un delai explicite et plus court que celui de Gunicorn, on
+# s'assure que c'est TOUJOURS Fisca AI qui abandonne proprement en
+# premier - jamais Gunicorn qui coupe tout de force.
+# ---------------------------------------------------------------------------
+GEMINI_TIMEOUT_SECONDS = 12
+OPENAI_TIMEOUT_SECONDS = 12
+# Delai total maximum si les deux etages IA echouent l'un apres l'autre
+# (12 + 12 = 24s) - reste sous le delai par defaut de Gunicorn (30s),
+# laissant une marge de securite avant que le moteur local (instantane)
+# ne prenne le relais dans tous les cas.
+
+# ---------------------------------------------------------------------------
 # Partie IA n°1 - Gemini (PRIORITAIRE) - optionnelle, activee seulement si
 # configuree. Utilise le File Search Store cree via Colab.
 # ---------------------------------------------------------------------------
 try:
     from google import genai
     from google.genai import types as genai_types
-    _gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"]) if os.environ.get("GEMINI_API_KEY") else None
+    _gemini_client = (
+        genai.Client(
+            api_key=os.environ["GEMINI_API_KEY"],
+            # Securite de premier niveau : limite le delai par defaut de
+            # TOUS les appels passes par ce client. Le vrai filet de
+            # securite reste toutefois celui pose directement sur
+            # l'appel dans repondre_gemini() ci-dessous (plus fiable
+            # selon la documentation officielle du SDK).
+            http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
+        )
+        if os.environ.get("GEMINI_API_KEY")
+        else None
+    )
 except Exception:
     _gemini_client = None
     genai_types = None
 
 GEMINI_FILE_SEARCH_STORE = os.environ.get("GEMINI_FILE_SEARCH_STORE")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
-GEMINI_TIMEOUT_SECONDS = 12
 
 
 def _construire_contenus_gemini(question_brute, historique):
@@ -119,7 +155,12 @@ def repondre_gemini(question_brute, historique=None):
     sur OpenAI, puis sur le moteur local. 'historique' est une liste
     optionnelle de tuples (question, reponse) des echanges precedents de
     la MEME conversation, transmise pour que Gemini comprenne les
-    questions de suivi ('et mes avantages ?')."""
+    questions de suivi ('et mes avantages ?').
+
+    Le timeout explicite (http_options) est ce qui garantit que cette
+    fonction abandonne proprement au bout de GEMINI_TIMEOUT_SECONDS,
+    plutot que de rester bloquee jusqu'a ce que Gunicorn tue le
+    processus de force (voir note en haut du fichier)."""
     if not _gemini_client or not GEMINI_FILE_SEARCH_STORE:
         return None
     try:
@@ -129,6 +170,7 @@ def repondre_gemini(question_brute, historique=None):
             config=genai_types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 max_output_tokens=2048,
+                http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
                 tools=[
                     genai_types.Tool(
                         file_search=genai_types.FileSearch(
@@ -175,6 +217,7 @@ def generer_titre_conversation(question, reponse):
                     "finale, sans prefixe."
                 ),
                 max_output_tokens=30,
+                http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
             ),
         )
         titre = (getattr(response, "text", "") or "").strip().strip('"').strip("'")
@@ -195,7 +238,6 @@ except Exception:
 
 OPENAI_VECTOR_STORE_ID = os.environ.get("OPENAI_VECTOR_STORE_ID")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-OPENAI_TIMEOUT_SECONDS = 12
 
 
 def repondre_ia(question_brute, historique=None):
@@ -582,4 +624,5 @@ def repondre(question_brute, historique=None):
     if resultat is not None:
         return resultat
     return repondre_locale(question_brute)
+
 
