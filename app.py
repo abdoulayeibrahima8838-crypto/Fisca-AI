@@ -130,10 +130,14 @@ _tentatives_echouees = {}  # contact -> [timestamps des echecs recents]
 
 
 def _connexion_bloquee(contact):
+    _nettoyer_dictionnaires_en_memoire()
     maintenant = time.time()
     historique = _tentatives_echouees.get(contact, [])
     historique = [t for t in historique if maintenant - t < DUREE_BLOCAGE_SECONDES]
-    _tentatives_echouees[contact] = historique
+    if historique:
+        _tentatives_echouees[contact] = historique
+    else:
+        _tentatives_echouees.pop(contact, None)
     return len(historique) >= MAX_TENTATIVES_CONNEXION
 
 
@@ -153,10 +157,14 @@ _demandes_reinitialisation = {}  # contact -> [timestamps]
 
 
 def _reinitialisation_bloquee(contact):
+    _nettoyer_dictionnaires_en_memoire()
     maintenant = time.time()
     historique = _demandes_reinitialisation.get(contact, [])
     historique = [t for t in historique if maintenant - t < DUREE_BLOCAGE_SECONDES]
-    _demandes_reinitialisation[contact] = historique
+    if historique:
+        _demandes_reinitialisation[contact] = historique
+    else:
+        _demandes_reinitialisation.pop(contact, None)
     return len(historique) >= MAX_DEMANDES_REINITIALISATION
 
 
@@ -174,6 +182,7 @@ _requetes_recentes = {}  # cle -> [timestamps]
 
 
 def requete_trop_frequente(cle, max_requetes, fenetre_secondes):
+    _nettoyer_dictionnaires_en_memoire()
     maintenant = time.time()
     historique = _requetes_recentes.get(cle, [])
     historique = [t for t in historique if maintenant - t < fenetre_secondes]
@@ -237,6 +246,67 @@ def message_whatsapp_deja_traite(message_id):
         return True
     _messages_whatsapp_traites[message_id] = maintenant
     return False
+
+
+# ---------------------------------------------------------------------------
+# Nettoyage periodique global de la memoire - LA VRAIE CORRECTION de la
+# fuite memoire (cause du crash "SIGKILL / Out of memory" observe dans
+# les logs). Sans ce nettoyage, chaque nouveau contact/IP qui declenche
+# une verification (connexion, reinitialisation, rate limiting) laisse
+# une entree dans un dictionnaire en memoire - et si ce contact/IP n'est
+# JAMAIS revu (cas courant sur un vrai site avec des visiteurs varies),
+# cette entree n'etait auparavant jamais nettoyee, meme une fois ses
+# timestamps tous perimes. Sur la duree, la memoire grossit sans jamais
+# redescendre, jusqu'a depasser la limite de 512 Mo du plan gratuit
+# Render et provoquer un arret force du processus.
+#
+# Ce balayage periodique (toutes les 10 minutes maximum, et jamais plus
+# souvent) parcourt les 3 dictionnaires et supprime toute entree dont
+# TOUS les timestamps sont perimes - y compris les cles jamais
+# revisitees depuis. Le dictionnaire de deduplication WhatsApp n'a pas
+# besoin de ce traitement : il se nettoie deja lui-meme integralement a
+# chaque appel (voir message_whatsapp_deja_traite).
+# ---------------------------------------------------------------------------
+_dernier_nettoyage_memoire = 0.0
+INTERVALLE_NETTOYAGE_MEMOIRE_SECONDES = 10 * 60  # 10 minutes
+
+
+def _nettoyer_dictionnaires_en_memoire():
+    global _dernier_nettoyage_memoire
+    maintenant = time.time()
+    if maintenant - _dernier_nettoyage_memoire < INTERVALLE_NETTOYAGE_MEMOIRE_SECONDES:
+        return
+    _dernier_nettoyage_memoire = maintenant
+
+    for cle in list(_tentatives_echouees.keys()):
+        historique = [t for t in _tentatives_echouees[cle] if maintenant - t < DUREE_BLOCAGE_SECONDES]
+        if historique:
+            _tentatives_echouees[cle] = historique
+        else:
+            _tentatives_echouees.pop(cle, None)
+
+    for cle in list(_demandes_reinitialisation.keys()):
+        historique = [t for t in _demandes_reinitialisation[cle] if maintenant - t < DUREE_BLOCAGE_SECONDES]
+        if historique:
+            _demandes_reinitialisation[cle] = historique
+        else:
+            _demandes_reinitialisation.pop(cle, None)
+
+    # Fenetre la plus large parmi les usages actuels de requete_trop_frequente
+    # (3600s pour l'inscription) - suffisant pour ne rien purger a tort.
+    for cle in list(_requetes_recentes.keys()):
+        historique = [t for t in _requetes_recentes[cle] if maintenant - t < 3600]
+        if historique:
+            _requetes_recentes[cle] = historique
+        else:
+            _requetes_recentes.pop(cle, None)
+
+    print(
+        f"[Fisca AI] Nettoyage memoire periodique : "
+        f"{len(_tentatives_echouees)} tentative(s) de connexion, "
+        f"{len(_demandes_reinitialisation)} demande(s) de reinitialisation, "
+        f"{len(_requetes_recentes)} limite(s) de frequence encore suivies en memoire."
+    )
 
 
 def get_db():
@@ -1511,6 +1581,7 @@ if __name__ == "__main__":
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
 
 
 
