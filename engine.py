@@ -110,7 +110,7 @@ SYSTEM_PROMPT = (
 # maximum aussi eleve que 2048 tokens n'apportait rien, mais pouvait
 # allonger inutilement le temps de generation.
 # ---------------------------------------------------------------------------
-GEMINI_TIMEOUT_SECONDS = 20
+GEMINI_TIMEOUT_SECONDS = 25
 GEMINI_MAX_OUTPUT_TOKENS = 700
 OPENAI_TIMEOUT_SECONDS = 12
 
@@ -119,6 +119,14 @@ OPENAI_TIMEOUT_SECONDS = 12
 # filet de secours OpenAI des que le compte aura de nouveau du credit,
 # sans toucher au code.
 OPENAI_FALLBACK_ACTIF = os.environ.get("OPENAI_FALLBACK_ACTIF", "0") == "1"
+
+# Bascule du moteur local - SUSPENDU par defaut le temps de retravailler
+# en profondeur son contenu (cache_data.py). Tant qu'il reste suspendu,
+# une reponse Gemini en echec n'entraine plus une reponse locale
+# potentiellement confuse : elle affiche un message d'indisponibilite
+# clair et honnete a la place. Repasser a "1" sur Render pour le
+# reactiver une fois le travail de fond termine, sans toucher au code.
+MOTEUR_LOCAL_ACTIF = os.environ.get("MOTEUR_LOCAL_ACTIF", "0") == "1"
 
 # Bascule de diagnostic - permet de tester Gemini SANS File Search
 # (juste le modele, sans recherche documentaire) pour determiner si les
@@ -235,7 +243,12 @@ def repondre_gemini(question_brute, historique=None):
         }
     except Exception as e:
         duree = time.time() - debut
-        suite = "OpenAI" if OPENAI_FALLBACK_ACTIF else "le moteur local (OpenAI desactive)"
+        if OPENAI_FALLBACK_ACTIF:
+            suite = "OpenAI"
+        elif MOTEUR_LOCAL_ACTIF:
+            suite = "le moteur local"
+        else:
+            suite = "un message d'indisponibilite (moteur local suspendu)"
         print(
             f"[Fisca AI][Gemini] ECHEC ({type(e).__name__}: {e}) - duree={duree:.1f}s, "
             f"file_search={utilise_file_search}, historique={nb_echanges} echange(s) - bascule sur {suite}."
@@ -637,8 +650,14 @@ def repondre_locale(question_brute):
 
 def repondre(question_brute, historique=None):
     """Ordre de priorite ACTUEL (temporaire, voir tete de fichier) :
-    Gemini (File Search) -> moteur local. OpenAI est saute tant que
-    OPENAI_FALLBACK_ACTIF n'est pas active (compte sans credit).
+    Gemini (File Search) -> moteur local, SI ce dernier est actif.
+
+    OpenAI est saute tant que OPENAI_FALLBACK_ACTIF n'est pas active
+    (compte sans credit). Le moteur local est SUSPENDU par defaut
+    (MOTEUR_LOCAL_ACTIF) le temps qu'il soit retravaille en profondeur -
+    ses reponses etaient parfois source de confusion. Tant qu'il reste
+    suspendu, un echec Gemini renvoie un message d'indisponibilite clair
+    plutot qu'une reponse locale potentiellement confuse.
 
     Chaque etage n'est tente que si le precedent est indisponible ou
     echoue - jamais d'erreur bloquante pour l'utilisateur.
@@ -651,9 +670,25 @@ def repondre(question_brute, historique=None):
     resultat = repondre_gemini(question_brute, historique)
     if resultat is not None:
         return resultat
+
     if OPENAI_FALLBACK_ACTIF:
         resultat = repondre_ia(question_brute, historique)
         if resultat is not None:
             return resultat
-    return repondre_locale(question_brute)
+
+    if MOTEUR_LOCAL_ACTIF:
+        return repondre_locale(question_brute)
+
+    print("[Fisca AI] Tous les moteurs disponibles ont echoue (moteur local suspendu) - message d'indisponibilite renvoye.")
+    return {
+        "niveau": 3,
+        "reponse": (
+            "Le service rencontre actuellement une difficulte technique passagere. "
+            "Merci de reessayer votre question dans quelques instants."
+        ),
+        "source": None,
+        "verified": None,
+        "question_comprise": question_brute,
+        "moteur": "indisponible",
+    }
 
