@@ -4,9 +4,21 @@ Moteur de comprehension de Fisca AI.
 
 Architecture "filet de securite" a 3 etages :
 1) Gemini File Search (PRIORITAIRE) - si configure et si l'appel reussit.
-2) OpenAI File Search (SECOURS) - si Gemini indisponible/en echec.
+2) OpenAI File Search (SECOURS) - ACTUELLEMENT DESACTIVE (voir
+   OPENAI_FALLBACK_ACTIF ci-dessous), le compte OpenAI n'ayant plus de
+   credit operationnel. Reactivable a tout moment via une seule
+   variable d'environnement, sans toucher au code.
 3) Moteur local base sur mots-cles (DERNIER RECOURS) - toujours
    disponible, aucune dependance externe.
+
+ARCHITECTURE TEMPORAIRE ACTUELLE : Question -> Gemini (File Search) ->
+si succes, reponse Gemini -> si echec/timeout, moteur local directement
+(OpenAI saute).
+
+ARCHITECTURE CIBLE (une fois OpenAI de nouveau credite) : Gemini ->
+OpenAI -> moteur local. Pour y repasser, il suffira de positionner
+OPENAI_FALLBACK_ACTIF=1 dans les variables d'environnement Render -
+aucune modification de code necessaire.
 
 MOTEUR LOCAL - v3 (ajoute un seuil de couverture) :
 La v2 corrigeait le double-comptage (chaque mot de la question ne
@@ -28,6 +40,7 @@ question, meme avec un score cumule correct, est desormais rejetee.
 import os
 import re
 import math
+import time
 import unicodedata
 import difflib
 from collections import Counter
@@ -84,29 +97,35 @@ SYSTEM_PROMPT = (
 )
 
 # ---------------------------------------------------------------------------
-# Delais maximum accordes a chaque etage IA, AVANT de basculer sur le
-# suivant. Definis ici, en haut du fichier, car ils sont utilises des
-# la creation du client Gemini juste en dessous.
+# Reglages de delai et de volume - centralises en haut du fichier.
 #
-# POURQUOI CETTE LIMITE EST CRITIQUE : sans elle, un appel Gemini lent
-# (charge du service, fichiers volumineux dans le File Search Store...)
-# pouvait rester bloque indefiniment. Gunicorn (le serveur qui fait
-# tourner Fisca AI) finit alors par tuer le processus de force au bout
-# de son propre delai ("WORKER TIMEOUT" dans les logs Render) - ce qui
-# coupe la connexion brutalement cote utilisateur, AVANT que le filet de
-# securite prevu (bascule vers OpenAI, puis vers le moteur local) ait la
-# moindre chance de se declencher.
+# GEMINI_TIMEOUT_SECONDS : 12 -> 20s. Le File Search (recherche dans les
+# documents avant de generer la reponse) prend plus de temps qu'un
+# simple appel de generation - 12s etait trop court et provoquait des
+# 504 DEADLINE_EXCEEDED cote Google avant meme d'avoir laisse une chance
+# raisonnable a la recherche documentaire de se terminer.
 #
-# En fixant un delai explicite et plus court que celui de Gunicorn, on
-# s'assure que c'est TOUJOURS Fisca AI qui abandonne proprement en
-# premier - jamais Gunicorn qui coupe tout de force.
+# GEMINI_MAX_OUTPUT_TOKENS : 2048 -> 700. Fisca AI produit volontairement
+# des reponses courtes (3-6 phrases, voir SYSTEM_PROMPT) - autoriser un
+# maximum aussi eleve que 2048 tokens n'apportait rien, mais pouvait
+# allonger inutilement le temps de generation.
 # ---------------------------------------------------------------------------
-GEMINI_TIMEOUT_SECONDS = 12
+GEMINI_TIMEOUT_SECONDS = 20
+GEMINI_MAX_OUTPUT_TOKENS = 700
 OPENAI_TIMEOUT_SECONDS = 12
-# Delai total maximum si les deux etages IA echouent l'un apres l'autre
-# (12 + 12 = 24s) - reste sous le delai par defaut de Gunicorn (30s),
-# laissant une marge de securite avant que le moteur local (instantane)
-# ne prenne le relais dans tous les cas.
+
+# Bascule OpenAI - voir le commentaire d'architecture en tete de fichier.
+# Desactive par defaut : passer a "1" sur Render pour reactiver le
+# filet de secours OpenAI des que le compte aura de nouveau du credit,
+# sans toucher au code.
+OPENAI_FALLBACK_ACTIF = os.environ.get("OPENAI_FALLBACK_ACTIF", "0") == "1"
+
+# Bascule de diagnostic - permet de tester Gemini SANS File Search
+# (juste le modele, sans recherche documentaire) pour determiner si les
+# 504 viennent du modele lui-meme ou specifiquement de la recherche dans
+# le File Search Store. Mettre GEMINI_FILE_SEARCH_ACTIF=0 sur Render
+# pour ce test, puis remettre a 1 (ou retirer la variable) ensuite.
+GEMINI_FILE_SEARCH_ACTIF = os.environ.get("GEMINI_FILE_SEARCH_ACTIF", "1") == "1"
 
 # ---------------------------------------------------------------------------
 # Partie IA n°1 - Gemini (PRIORITAIRE) - optionnelle, activee seulement si
@@ -150,39 +169,62 @@ def _construire_contenus_gemini(question_brute, historique):
 
 
 def repondre_gemini(question_brute, historique=None):
-    """Tente une reponse via Gemini File Search. Retourne None si
-    indisponible pour une raison quelconque - l'appelant bascule alors
-    sur OpenAI, puis sur le moteur local. 'historique' est une liste
-    optionnelle de tuples (question, reponse) des echanges precedents de
-    la MEME conversation, transmise pour que Gemini comprenne les
-    questions de suivi ('et mes avantages ?').
+    """Tente une reponse via Gemini (avec File Search si
+    GEMINI_FILE_SEARCH_ACTIF et GEMINI_FILE_SEARCH_STORE sont tous deux
+    actifs, sans File Search sinon - utile pour le diagnostic). Retourne
+    None si indisponible pour une raison quelconque - l'appelant bascule
+    alors sur OpenAI (si actif) puis sur le moteur local.
 
-    Le timeout explicite (http_options) est ce qui garantit que cette
-    fonction abandonne proprement au bout de GEMINI_TIMEOUT_SECONDS,
-    plutot que de rester bloquee jusqu'a ce que Gunicorn tue le
-    processus de force (voir note en haut du fichier)."""
-    if not _gemini_client or not GEMINI_FILE_SEARCH_STORE:
+    'historique' est une liste optionnelle de tuples (question, reponse)
+    des echanges precedents de la MEME conversation, transmise pour que
+    Gemini comprenne les questions de suivi ('et mes avantages ?').
+
+    Chronometrage detaille : chaque appel (succes ou echec) est logge
+    avec sa duree exacte, la taille de la reponse ou le type d'erreur,
+    et le nombre d'echanges d'historique transmis - c'est ce qui permet
+    de savoir precisement combien de temps Gemini met avant un eventuel
+    504 DEADLINE_EXCEEDED, plutot que de deviner."""
+    if not _gemini_client:
         return None
+
+    nb_echanges = len(historique or [])
+    utilise_file_search = bool(GEMINI_FILE_SEARCH_ACTIF and GEMINI_FILE_SEARCH_STORE)
+    debut = time.time()
+
+    config_kwargs = dict(
+        system_instruction=SYSTEM_PROMPT,
+        max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS,
+        http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
+    )
+    if utilise_file_search:
+        config_kwargs["tools"] = [
+            genai_types.Tool(
+                file_search=genai_types.FileSearch(
+                    file_search_store_names=[GEMINI_FILE_SEARCH_STORE]
+                )
+            )
+        ]
+
     try:
         response = _gemini_client.models.generate_content(
             model=GEMINI_MODEL,
             contents=_construire_contenus_gemini(question_brute, historique),
-            config=genai_types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                max_output_tokens=2048,
-                http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
-                tools=[
-                    genai_types.Tool(
-                        file_search=genai_types.FileSearch(
-                            file_search_store_names=[GEMINI_FILE_SEARCH_STORE]
-                        )
-                    )
-                ],
-            ),
+            config=genai_types.GenerateContentConfig(**config_kwargs),
         )
+        duree = time.time() - debut
         texte = getattr(response, "text", "") or ""
         if not texte.strip():
+            print(
+                f"[Fisca AI][Gemini] Reponse VIDE - duree={duree:.1f}s, "
+                f"file_search={utilise_file_search}, historique={nb_echanges} echange(s)."
+            )
             return None
+
+        print(
+            f"[Fisca AI][Gemini] SUCCES - duree={duree:.1f}s, "
+            f"file_search={utilise_file_search}, taille_reponse={len(texte)} caracteres, "
+            f"historique={nb_echanges} echange(s)."
+        )
         return {
             "niveau": 1,
             "reponse": texte.strip(),
@@ -192,43 +234,31 @@ def repondre_gemini(question_brute, historique=None):
             "moteur": "gemini",
         }
     except Exception as e:
-        print(f"[Fisca AI] Echec de l'appel Gemini ({type(e).__name__}: {e}) - bascule sur OpenAI.")
+        duree = time.time() - debut
+        suite = "OpenAI" if OPENAI_FALLBACK_ACTIF else "le moteur local (OpenAI desactive)"
+        print(
+            f"[Fisca AI][Gemini] ECHEC ({type(e).__name__}: {e}) - duree={duree:.1f}s, "
+            f"file_search={utilise_file_search}, historique={nb_echanges} echange(s) - bascule sur {suite}."
+        )
         return None
 
 
 def generer_titre_conversation(question, reponse):
-    """Genere un titre court (4-6 mots) resumant le sujet d'une nouvelle
-    conversation, a partir de son tout premier echange. Utilise pour
-    l'affichage dans l'ecran Historique. En cas d'echec ou d'absence de
-    Gemini, retombe simplement sur le debut de la question - jamais
-    d'erreur bloquante pour l'utilisateur."""
-    repli = question.strip()[:40] or "Discussion"
-    if not _gemini_client:
-        return repli
-    try:
-        response = _gemini_client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=f"Question : {question}\nReponse : {reponse[:400]}",
-            config=genai_types.GenerateContentConfig(
-                system_instruction=(
-                    "Genere un titre tres court (4 a 6 mots maximum) resumant "
-                    "le sujet fiscal de cet echange. Reponds uniquement avec "
-                    "le titre lui-meme, sans guillemets, sans ponctuation "
-                    "finale, sans prefixe."
-                ),
-                max_output_tokens=30,
-                http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
-            ),
-        )
-        titre = (getattr(response, "text", "") or "").strip().strip('"').strip("'")
-        return titre[:60] if titre else repli
-    except Exception as e:
-        print(f"[Fisca AI] Echec de generation du titre ({type(e).__name__}: {e}) - repli sur la question.")
-        return repli
+    """Construit un titre court a partir des premiers mots de la
+    question - AUCUN appel IA. Le titre n'a pas besoin d'etre parfait ;
+    ce deuxieme appel Gemini, declenche a chaque toute premiere question
+    d'une conversation, ralentissait inutilement la reponse a cette
+    premiere question sans justification suffisante."""
+    titre = question.strip()
+    if len(titre) > 40:
+        coupe = titre[:40].rsplit(" ", 1)[0]
+        titre = (coupe or titre[:40]) + "…"
+    return titre or "Discussion"
 
 
 # ---------------------------------------------------------------------------
-# Partie IA n°2 - OpenAI (SECOURS si Gemini indisponible/en echec)
+# Partie IA n°2 - OpenAI (SECOURS) - voir OPENAI_FALLBACK_ACTIF en haut du
+# fichier : desactive par defaut le temps que le compte soit recredite.
 # ---------------------------------------------------------------------------
 try:
     from openai import OpenAI
@@ -606,23 +636,24 @@ def repondre_locale(question_brute):
 
 
 def repondre(question_brute, historique=None):
-    """Ordre de priorite : Gemini (File Search) -> OpenAI (File Search)
-    -> moteur local. Chaque etage n'est tente que si le precedent est
-    indisponible ou echoue - jamais d'erreur bloquante pour
-    l'utilisateur, quel que soit le nombre d'IA configurees ou non.
+    """Ordre de priorite ACTUEL (temporaire, voir tete de fichier) :
+    Gemini (File Search) -> moteur local. OpenAI est saute tant que
+    OPENAI_FALLBACK_ACTIF n'est pas active (compte sans credit).
+
+    Chaque etage n'est tente que si le precedent est indisponible ou
+    echoue - jamais d'erreur bloquante pour l'utilisateur.
 
     'historique' est une liste optionnelle de tuples (question, reponse)
     des echanges precedents de la meme conversation - transmise aux
-    moteurs IA pour la continuite (voir REGLE DE CONTINUITE DE
-    CONVERSATION dans le prompt systeme). Le moteur local, purement
-    base sur des mots-cles, ignore ce parametre : il n'a pas la
-    capacite de raisonner sur un contexte de conversation."""
+    moteurs IA pour la continuite. Le moteur local, purement base sur
+    des mots-cles, ignore ce parametre : il n'a pas la capacite de
+    raisonner sur un contexte de conversation."""
     resultat = repondre_gemini(question_brute, historique)
     if resultat is not None:
         return resultat
-    resultat = repondre_ia(question_brute, historique)
-    if resultat is not None:
-        return resultat
+    if OPENAI_FALLBACK_ACTIF:
+        resultat = repondre_ia(question_brute, historique)
+        if resultat is not None:
+            return resultat
     return repondre_locale(question_brute)
-
 
