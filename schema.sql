@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS cgi_articles (
     section_num TEXT, section_titre TEXT,
     ssection_num TEXT, ssection_titre TEXT,
     text TEXT NOT NULL,
-    embedding vector(3072)                -- à ajuster selon gemini-embedding-001
+    embedding vector(1536)                -- reduit de 3072 a 1536 (limite HNSW = 2000 dimensions max)
 );
 
 CREATE INDEX IF NOT EXISTS idx_cgi_articles_embedding
@@ -34,3 +34,4 @@ CREATE TABLE IF NOT EXISTS article_refs (
 
 CREATE INDEX IF NOT EXISTS idx_article_refs_source ON article_refs (source_article_id);
 CREATE INDEX IF NOT EXISTS idx_article_refs_target ON article_refs (target_article_id);
+
