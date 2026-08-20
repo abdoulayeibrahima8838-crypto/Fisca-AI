@@ -155,20 +155,42 @@ def inserer_renvois():
     print("Étape 3/3 — Insertion des renvois entre articles...")
     with open("cgi2026_refs.json", encoding="utf-8") as f:
         refs = json.load(f)
-    print(f"  {len(refs)} renvois à insérer.")
+    print(f"  {len(refs)} renvois à traiter.")
 
-    with conn.cursor() as cur:
-        for r in refs:
-            cur.execute(
-                """
-                INSERT INTO article_refs (source_article_id, target_article_id, ref_type)
-                VALUES (%(source_article_id)s, %(target_article_id)s, %(ref_type)s)
-                ON CONFLICT (source_article_id, target_article_id, ref_type) DO NOTHING
-                """,
-                r,
-            )
-    conn.commit()
-    print("  Renvois insérés (les doublons éventuels sont ignorés proprement).\n")
+    reussis = 0
+    ignores = []
+    for r in refs:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO article_refs (source_article_id, target_article_id, ref_type)
+                    VALUES (%(source_article_id)s, %(target_article_id)s, %(ref_type)s)
+                    ON CONFLICT (source_article_id, target_article_id, ref_type) DO NOTHING
+                    """,
+                    r,
+                )
+            conn.commit()
+            reussis += 1
+        except psycopg2.errors.ForeignKeyViolation:
+            # L'article source ou cible n'existe pas encore en base - le plus
+            # souvent parce que son embedding a echoue a l'etape precedente.
+            # On ignore CE renvoi precis et on continue, plutot que de tout
+            # arreter : relancer le script plus tard (une fois l'article
+            # manquant corrige) inserera automatiquement ce renvoi.
+            conn.rollback()
+            ignores.append(r)
+        except Exception as e:
+            conn.rollback()
+            print(f"    Erreur inattendue sur un renvoi ({r}) : {type(e).__name__}: {e}")
+
+    print(f"  {reussis} renvoi(s) inséré(s) avec succès.")
+    if ignores:
+        articles_manquants = sorted({r["target_article_id"] for r in ignores} | {r["source_article_id"] for r in ignores})
+        print(f"  {len(ignores)} renvoi(s) ignoré(s) car un article lié n'existe pas encore en base.")
+        print(f"  Article(s) manquant(s) probable(s) (embedding en échec) : {articles_manquants}")
+        print("  -> Corrige ces articles puis relance le script : ces renvois s'inséreront automatiquement.")
+    print()
 
 
 if __name__ == "__main__":
