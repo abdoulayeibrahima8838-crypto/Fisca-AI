@@ -51,7 +51,7 @@ if not GEMINI_API_KEY:
     sys.exit(1)
 
 EMBEDDING_MODEL = "gemini-embedding-001"
-EMBEDDING_DIMENSIONS = 3072  # doit correspondre a vector(3072) dans schema.sql
+EMBEDDING_DIMENSIONS = 1536  # reduit de 3072 - pgvector HNSW ne supporte pas plus de 2000 dimensions ; doit correspondre a vector(1536) dans schema.sql
 MAX_ESSAIS_PAR_ARTICLE = 3
 DELAI_ENTRE_ESSAIS_SECONDES = 5
 
@@ -178,3 +178,4 @@ if __name__ == "__main__":
     inserer_renvois()
     conn.close()
     print("=== Terminé. La base pgvector est prête. ===")
+
