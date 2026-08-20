@@ -104,11 +104,15 @@ SYSTEM_PROMPT = (
 # ---------------------------------------------------------------------------
 # Reglages de delai et de volume - centralises en haut du fichier.
 #
-# GEMINI_TIMEOUT_SECONDS : 12 -> 20s. Le File Search (recherche dans les
-# documents avant de generer la reponse) prend plus de temps qu'un
-# simple appel de generation - 12s etait trop court et provoquait des
-# 504 DEADLINE_EXCEEDED cote Google avant meme d'avoir laisse une chance
-# raisonnable a la recherche documentaire de se terminer.
+# GEMINI_TIMEOUT_SECONDS : 12 -> 20 -> 25 -> 35s. Meme a 25s, des appels
+# avec File Search actif ont continue a echouer en 504 DEADLINE_EXCEEDED
+# tout pres de la limite (ex. 24.4s observes en production) - la
+# recherche documentaire sur les 398 pages du CGI 2026 a parfois
+# legitimement besoin de plus de temps pour terminer. IMPORTANT : le
+# Start Command Gunicorn sur Render doit rester a --timeout 45 minimum
+# (marge de 10s) pour que ce delai reste toujours sous celui de
+# Gunicorn, sans quoi Gunicorn coupe le processus de force avant que ce
+# timeout n'ait la chance de se declencher proprement.
 #
 # GEMINI_MAX_OUTPUT_TOKENS : 2048 -> 1500 (700 s'est revele trop serre en
 # pratique : une partie de ce budget de tokens est consommee par le
@@ -118,7 +122,7 @@ SYSTEM_PROMPT = (
 # le SYSTEM_PROMPT). 1500 laisse une vraie marge de securite tout en
 # restant nettement en dessous de l'ancienne limite de 2048.
 # ---------------------------------------------------------------------------
-GEMINI_TIMEOUT_SECONDS = 25
+GEMINI_TIMEOUT_SECONDS = 35
 GEMINI_MAX_OUTPUT_TOKENS = 1500
 OPENAI_TIMEOUT_SECONDS = 12
 
@@ -699,4 +703,5 @@ def repondre(question_brute, historique=None):
         "question_comprise": question_brute,
         "moteur": "indisponible",
     }
+
 
