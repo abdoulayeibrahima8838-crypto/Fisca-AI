@@ -897,7 +897,7 @@ def poser_question():
     profondeur = PROFONDEUR_CONTEXTE_HISTORIQUE if session.get("contexte_profond") else PROFONDEUR_CONTEXTE_DEFAUT
     historique = contexte_conversation(conversation_id, profondeur)
 
-    resultat = repondre(texte, historique=historique)
+    resultat = repondre(texte, historique=historique, db=get_db())
 
     db = get_db()
     cur = db.cursor()
@@ -1540,7 +1540,7 @@ def whatsapp_message_recu():
     conversation_id, _ = conversation_active(user["id"])
     historique_conversation = contexte_conversation(conversation_id, PROFONDEUR_CONTEXTE_DEFAUT)
 
-    resultat = repondre(texte, historique=historique_conversation)
+    resultat = repondre(texte, historique=historique_conversation, db=get_db())
 
     db = get_db()
     cur = db.cursor()
@@ -1581,6 +1581,7 @@ if __name__ == "__main__":
     debug_mode = os.environ.get("FISCA_AI_DEBUG", "0") == "1"
     print(f"Fisca AI (phase test) - port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
 
 
 
