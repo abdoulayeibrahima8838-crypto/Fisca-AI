@@ -15,6 +15,8 @@ Il tourne sur Render (accès réseau), pas dans l'environnement de préparation.
 import re
 from dataclasses import dataclass, field
 
+from google.genai import types as genai_types
+
 
 TOP_K_VECTOR = 5          # nb d'articles récupérés par similarité vectorielle
 MAX_EXPANSION_PER_ARTICLE = 4  # nb max de renvois ajoutés par article pivot
@@ -31,8 +33,11 @@ class RetrievedArticle:
 
 
 def search_pivot_articles(db, query_embedding, top_k=TOP_K_VECTOR):
-    """Étape 1 : recherche vectorielle pure -> articles pivot."""
-    rows = db.execute(
+    """Étape 1 : recherche vectorielle pure -> articles pivot.
+    'db' est une connexion psycopg2 (pas un curseur) - on ouvre le
+    curseur ici, comme partout ailleurs dans Fisca AI (voir app.py)."""
+    cur = db.cursor()
+    cur.execute(
         """
         SELECT article_id, text, livre_titre, chapitre_titre, section_titre
         FROM cgi_articles
@@ -40,7 +45,8 @@ def search_pivot_articles(db, query_embedding, top_k=TOP_K_VECTOR):
         LIMIT %s
         """,
         (query_embedding, top_k),
-    ).fetchall()
+    )
+    rows = cur.fetchall()
     return [
         RetrievedArticle(
             article_id=r["article_id"], text=r["text"],
@@ -60,7 +66,8 @@ def expand_via_refs(db, pivots, max_per_article=MAX_EXPANSION_PER_ARTICLE):
     seen = set(pivot_ids)
 
     for p in pivots:
-        rows = db.execute(
+        cur = db.cursor()
+        cur.execute(
             """
             SELECT r.target_article_id, r.ref_type,
                    c.text, c.livre_titre, c.chapitre_titre, c.section_titre
@@ -70,7 +77,8 @@ def expand_via_refs(db, pivots, max_per_article=MAX_EXPANSION_PER_ARTICLE):
             LIMIT %s
             """,
             (p.article_id, max_per_article),
-        ).fetchall()
+        )
+        rows = cur.fetchall()
         for r in rows:
             if r["target_article_id"] in seen:
                 continue
@@ -116,6 +124,39 @@ def check_no_hallucinated_articles(answer_text, context_article_ids):
     context_set = set(context_article_ids)
     suspect = sorted({c for c in cited if c not in context_set}, key=lambda x: int(re.sub(r"\D", "", x)))
     return suspect
+
+
+def embed_question(gemini_client, texte_question):
+    """Transforme une QUESTION en vecteur - utilise task_type='RETRIEVAL_QUERY',
+    different de 'RETRIEVAL_DOCUMENT' utilise pour indexer les articles
+    (voir generer_embeddings.py). Gemini optimise differemment les deux
+    cas : un vecteur de question et un vecteur de document ne sont pas
+    traites de facon symetrique en interne, meme si le modele est le meme."""
+    resultat = gemini_client.models.embed_content(
+        model="gemini-embedding-001",
+        contents=texte_question,
+        config=genai_types.EmbedContentConfig(
+            task_type="RETRIEVAL_QUERY",
+            output_dimensionality=1536,  # doit correspondre a schema.sql
+        ),
+    )
+    return resultat.embeddings[0].values
+
+
+def call_gemini_llm(gemini_client, prompt, model="gemini-3.6-flash", max_output_tokens=1500, timeout_secondes=35):
+    """Appelle Gemini pour la generation finale - SANS File Search, puisque
+    le contexte pertinent est deja construit par notre propre recherche
+    (search_pivot_articles + expand_via_refs). C'est ce qui rend cet appel
+    beaucoup plus simple et rapide que l'ancien chemin File Search."""
+    response = gemini_client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=genai_types.GenerateContentConfig(
+            max_output_tokens=max_output_tokens,
+            http_options=genai_types.HttpOptions(timeout=timeout_secondes * 1000),
+        ),
+    )
+    return getattr(response, "text", "") or ""
 
 
 def answer_query(db, user_question, embed_fn, llm_fn):
