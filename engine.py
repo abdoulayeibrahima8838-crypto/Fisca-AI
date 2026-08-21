@@ -660,7 +660,110 @@ def repondre_locale(question_brute):
     }
 
 
-def repondre(question_brute, historique=None):
+# ---------------------------------------------------------------------------
+# RAG maison (CGI 2026 decoupe en 1082 articles, indexes avec pgvector) -
+# destine a remplacer progressivement le File Search Gemini, trop lent et
+# peu fiable sur le plan gratuit (voir les echecs 504/429 en production).
+#
+# Desactive par defaut (RAG_ACTIF) - la base pgvector doit d'abord etre
+# entierement peuplee (generer_embeddings.py) avant activation. Passer a
+# "1" sur Render une fois la recherche validee via test_rag.py.
+#
+# TROIS NIVEAUX DE REPLI, du plus riche au plus basique :
+#   1) Recherche RAG reussie + Gemini redige une vraie reponse -> ideal.
+#   2) Recherche RAG reussie mais la REDACTION echoue (quota de
+#      generation epuise, timeout...) -> on affiche le texte BRUT du
+#      meilleur article trouve, sans reformulation. Moins agreable a
+#      lire, mais JAMAIS faux : c'est le vrai texte de loi. Ce niveau ne
+#      consomme que le quota d'embedding (1000/jour), quasiment toujours
+#      disponible meme quand le quota de generation (20/jour) est grille.
+#   3) La RECHERCHE elle-meme echoue (base de donnees injoignable, etc.)
+#      -> repondre_rag() retourne None, l'appelant (repondre()) bascule
+#      alors sur l'ancien chemin (File Search puis moteur local).
+# ---------------------------------------------------------------------------
+RAG_ACTIF = os.environ.get("RAG_ACTIF", "0") == "1"
+
+
+def repondre_rag(question_brute, db, historique=None):
+    """Tente une reponse via le RAG maison. Voir le commentaire d'archi-
+    tecture juste au-dessus pour la logique des 3 niveaux de repli.
+    'db' est une connexion psycopg2 deja ouverte (fournie par app.py)."""
+    if not _gemini_client or not RAG_ACTIF:
+        return None
+
+    from rag import (
+        embed_question, search_pivot_articles, expand_via_refs,
+        build_context_blocks, check_no_hallucinated_articles, call_gemini_llm,
+    )
+
+    debut = time.time()
+    try:
+        vecteur_question = embed_question(_gemini_client, question_brute)
+        pivots = search_pivot_articles(db, vecteur_question, top_k=5)
+        if not pivots:
+            print(f"[Fisca AI][RAG] Aucun article pertinent trouvé — durée={time.time()-debut:.1f}s.")
+            return None
+        linked = expand_via_refs(db, pivots)
+    except Exception as e:
+        print(f"[Fisca AI][RAG] ÉCHEC RECHERCHE ({type(e).__name__}: {e}) — durée={time.time()-debut:.1f}s — bascule sur l'ancien chemin.")
+        return None
+
+    contexte = build_context_blocks(pivots, linked)
+    tous_ids = [a.article_id for a in pivots + linked]
+
+    prompt = (
+        SYSTEM_PROMPT + "\n\n"
+        "Voici les articles du CGI 2026 les plus pertinents pour cette question, "
+        "déjà sélectionnés pour toi :\n\n"
+        f"{contexte}\n\nQuestion : {question_brute}"
+    )
+
+    try:
+        reponse_texte = call_gemini_llm(
+            _gemini_client, prompt, model=GEMINI_MODEL,
+            max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS,
+            timeout_secondes=GEMINI_TIMEOUT_SECONDS,
+        )
+        if reponse_texte.strip():
+            duree = time.time() - debut
+            suspects = check_no_hallucinated_articles(reponse_texte, tous_ids)
+            print(
+                f"[Fisca AI][RAG] SUCCÈS — durée={duree:.1f}s, "
+                f"articles={tous_ids}, suspects={suspects or 'aucun'}."
+            )
+            return {
+                "niveau": 1,
+                "reponse": reponse_texte.strip(),
+                "source": f"Réponse générée par l'IA (RAG maison) — articles {', '.join(tous_ids)} du CGI 2026",
+                "verified": not suspects,
+                "question_comprise": question_brute,
+                "moteur": "rag",
+            }
+    except Exception as e:
+        print(
+            f"[Fisca AI][RAG] Rédaction en échec ({type(e).__name__}: {e}) — "
+            f"durée={time.time()-debut:.1f}s — repli sur le texte brut de l'article."
+        )
+
+    # Niveau 2 : la recherche a reussi mais la redaction a echoue (ou n'a
+    # rien renvoye) - on affiche le texte brut du meilleur article trouve.
+    meilleur = pivots[0]
+    print(f"[Fisca AI][RAG] Niveau 2 (texte brut) — article {meilleur.article_id}.")
+    return {
+        "niveau": 2,
+        "reponse": (
+            "Je n'ai pas pu rédiger une explication complète pour le moment, "
+            "mais voici l'article qui semble répondre à votre question :\n\n"
+            f"Article {meilleur.article_id} — {meilleur.text}"
+        ),
+        "source": f"Extrait brut du CGI 2026, article {meilleur.article_id} (rédaction indisponible)",
+        "verified": True,
+        "question_comprise": question_brute,
+        "moteur": "rag_brut",
+    }
+
+
+def repondre(question_brute, historique=None, db=None):
     """Ordre de priorite ACTUEL (temporaire, voir tete de fichier) :
     Gemini (File Search) -> moteur local, SI ce dernier est actif.
 
@@ -678,7 +781,16 @@ def repondre(question_brute, historique=None):
     des echanges precedents de la meme conversation - transmise aux
     moteurs IA pour la continuite. Le moteur local, purement base sur
     des mots-cles, ignore ce parametre : il n'a pas la capacite de
-    raisonner sur un contexte de conversation."""
+    raisonner sur un contexte de conversation.
+
+    'db' est une connexion psycopg2 optionnelle, necessaire uniquement
+    pour le RAG maison (voir repondre_rag). Sans elle, ou si RAG_ACTIF
+    n'est pas active, ce premier etage est simplement saute."""
+    if db is not None:
+        resultat = repondre_rag(question_brute, db, historique)
+        if resultat is not None:
+            return resultat
+
     resultat = repondre_gemini(question_brute, historique)
     if resultat is not None:
         return resultat
@@ -703,5 +815,6 @@ def repondre(question_brute, historique=None):
         "question_comprise": question_brute,
         "moteur": "indisponible",
     }
+
 
 
