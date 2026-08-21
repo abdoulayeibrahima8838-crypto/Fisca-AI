@@ -41,7 +41,7 @@ def search_pivot_articles(db, query_embedding, top_k=TOP_K_VECTOR):
         """
         SELECT article_id, text, livre_titre, chapitre_titre, section_titre
         FROM cgi_articles
-        ORDER BY embedding <=> %s
+        ORDER BY embedding <=> %s::vector
         LIMIT %s
         """,
         (query_embedding, top_k),
@@ -194,3 +194,4 @@ def answer_query(db, user_question, embed_fn, llm_fn):
         "sources": all_ids,
         "suspects": suspects,
     }
+
