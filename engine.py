@@ -687,19 +687,23 @@ RAG_ACTIF = os.environ.get("RAG_ACTIF", "0") == "1"
 def repondre_rag(question_brute, db, historique=None):
     """Tente une reponse via le RAG maison. Voir le commentaire d'archi-
     tecture juste au-dessus pour la logique des 3 niveaux de repli.
-    'db' est une connexion psycopg2 deja ouverte (fournie par app.py)."""
+    'db' est une connexion psycopg2 deja ouverte (fournie par app.py).
+
+    Depuis la Phase 3, utilise recherche_hybride (vectoriel + mots-cles,
+    fusionnes par rang) au lieu du vectoriel seul, et une expansion des
+    renvois ponderee par type de relation (voir rag.py)."""
     if not _gemini_client or not RAG_ACTIF:
         return None
 
     from rag import (
-        embed_question, search_pivot_articles, expand_via_refs,
+        embed_question, recherche_hybride, expand_via_refs,
         build_context_blocks, check_no_hallucinated_articles, call_gemini_llm,
     )
 
     debut = time.time()
     try:
         vecteur_question = embed_question(_gemini_client, question_brute)
-        pivots = search_pivot_articles(db, vecteur_question, top_k=5)
+        pivots = recherche_hybride(db, vecteur_question, question_brute, top_k=5)
         if not pivots:
             print(f"[Fisca AI][RAG] Aucun article pertinent trouvé — durée={time.time()-debut:.1f}s.")
             return None
@@ -815,6 +819,3 @@ def repondre(question_brute, historique=None, db=None):
         "question_comprise": question_brute,
         "moteur": "indisponible",
     }
-
-
-
