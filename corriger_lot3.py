@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+corriger_lot3.py — A LANCER UNE SEULE FOIS depuis le Shell Render.
+
+Lot 3 : articles 225, 240, 241, 259, 310, 331, 332, 363, 372, 373.
+
+Usage :
+    python corriger_lot3.py
+"""
+import json
+
+CHEMIN_FICHIER = "cgi2026_articles_corrige.json"
+
+with open(CHEMIN_FICHIER, encoding="utf-8") as f:
+    articles = json.load(f)
+
+corrections = {
+    "225": "Art. 225.- Le taux de l’impôt sur les plus-values immobilières est fixé à 5%.\n",
+    "240": (
+        "Art. 240.- Sont exonérées de la taxe d’apprentissage :\n"
+        "a) les personnes physiques ou morales qui ont pour activité exclusive l’enseignement ;\n"
+        "b) les personnes physiques ou morales qui ont pour activité exclusive les soins de santé ;\n"
+        "c) les revenus mis à la disposition du salarié de nationalité nigérienne au titre de la première année de recrutement.\n"
+    ),
+    "241": (
+        "Art. 241.- 1) La base imposable de la taxe est constituée par la totalité des rémunérations mises à la disposition\n"
+        "des salariés, à titre de traitements, indemnités, émoluments et salaires,\n"
+        "y compris les avantages en nature estimés comme en matière d’impôt sur\n"
+        "les traitements et salaires.\n"
+        "2) Toutefois, sont déductibles de la\n"
+        "base imposable :\n"
+        "a) les frais de formation supportés\n"
+        "par les assujettis ;\n"
+        "b) les salaires des techniciens chargés de la formation des apprentis et du perfectionnement des\n"
+        "adultes, à l’exclusion de tout\n"
+        "autre travail ;\n"
+        "c) les subventions, bourses et allocations d’études ou des stages\n"
+        "de perfectionnement ;\n"
+        "d) les concours versés par les employeurs des établissements ou\n"
+        "organismes habilités pour assurer en leur lieu et place des\n"
+        "actions de formation technologique ou professionnelle ;\n"
+        "e) pour l’ensemble des employeurs,\n"
+        "les rémunérations versées à leurs\n"
+        "apprentis sous contrat d’apprentissage ;\n"
+        "f) les montants nets des rémunérations octroyées aux expatriés\n"
+        "dans le cadre des contrats à\n"
+        "durée indéterminée signés au\n"
+        "cours de l’année considérée ;\n"
+        "g) les montants nets des rémunérations octroyées aux expatriés\n"
+        "dans le cadre des contrats à durée déterminée d’une durée au\n"
+        "moins égale à un (1) an, signés\n"
+        "au cours de l’année considérée\n"
+        "au profit des jeunes de moins de\n"
+        "40 ans.\n"
+        "3) Le montant total des déductions est\n"
+        "plafonné à 50% de la base d’imposition déterminée au point 1 du présent\n"
+        "article.\n"
+    ),
+    "259": (
+        "Art. 259.- 1) Les dépenses relatives\n"
+        "aux grosses réparations à la charge\n"
+        "des propriétaires sont déductibles de\n"
+        "la base taxable lorsqu’elles sont dûment justifiées.\n"
+        "2) Sont réputées grosses réparations,\n"
+        "les dépenses effectuées par le propriétaire ayant pour objet :\n"
+        "- la remise en état du gros-œuvre (toiture, plafonds, plancher, escaliers, façades), des canalisations ou de l’installation électrique ;\n"
+        "- la remise en état du mur d’une propriété ;\n"
+        "- le remplacement d’un ascenseur vétuste, la part de la dépense payée au titre d’un contrat d’entretien d’un ascenseur restant à la charge du propriétaire ou encore les dépenses effectuées pour rendre une installation d’ascenseur conforme aux normes réglementaires de sécurité.\n"
+        "3) Toutefois, au cours d’un même exercice, le cumul de cette déduction ne\n"
+        "peut excéder 50% de la base taxable\n"
+        "au titre du même immeuble.\n"
+        "4) La faculté de déduction est limitée\n"
+        "à l’exercice au cours duquel les dépenses y afférentes ont été effectuées.\n"
+    ),
+    "310": (
+        "Art. 310.- 1) Sont exonérés de la taxe :\n"
+        "a) les véhicules appartenant aux\n"
+        "collectivités publiques : État,\n"
+        "Collectivités Territoriales et les\n"
+        "véhicules assurés par le budget\n"
+        "de l’État ;\n"
+        "b) les véhicules dont les propriétaires bénéficient de privilèges\n"
+        "diplomatiques et consulaires ;\n"
+        "c) les véhicules appartenant à des\n"
+        "personnes atteintes d’une invalidité permanente d’au moins\n"
+        "50% et servant exclusivement à\n"
+        "leur transport dans la limite d’un\n"
+        "seul véhicule par propriétaire ;\n"
+        "d) les véhicules spéciaux des entreprises agricoles, pastorales et\n"
+        "forestières (motoculteurs, tracteurs) servant dans le périmètre\n"
+        "de ces exploitations à l’exclusion\n"
+        "de tout transport sur la voie publique ;\n"
+        "e) les véhicules destinés à la vente\n"
+        "et détenus par des commerçants qui se sont acquittés de\n"
+        "la taxe professionnelle. Sont\n"
+        "compris dans cette catégorie\n"
+        "les véhicules d’occasion achetés, pour la revente, par des personnes physiques ou morales\n"
+        "qui en font habituellement le\n"
+        "commerce, figurant en stock au\n"
+        "31 décembre de l’année précédant celle de l’imposition ; la déclaration de ce stock est faite au\n"
+        "plus tard le 2 janvier auprès de\n"
+        "l’Administration fiscale.\n"
+        "f) les véhicules non utilisés ou réformés, étant précisé que seuls\n"
+        "sont considérés comme tels\n"
+        "les véhicules dont la carte grise\n"
+        "a été déposée au service des\n"
+        "transports ;\n"
+        "g) les véhicules d’une puissance\n"
+        "inférieure à un (1) cheval vapeur.\n"
+        "2) L’Administration fiscale délivre des\n"
+        "certificats d’exemption pour les véhicules exemptés de la taxe.\n"
+    ),
+    "331": (
+        "Art. 331.- Sont exclus de la base d’imposition :\n"
+        "a) les escomptes de caisse, les\n"
+        "remises, rabais, ristournes et\n"
+        "autres réductions de prix consentis directement aux clients déterminés conformément aux usages\n"
+        "établis dans chaque profession ;\n"
+        "b) les sommes remboursées aux\n"
+        "intermédiaires qui rendent\n"
+        "compte à leurs commettants\n"
+        "des débours effectués en leur\n"
+        "lieu et place et justifient, auprès\n"
+        "de l’Administration fiscale, la nature et le montant exact de ces\n"
+        "débours.\n"
+        "c) les sommes perçues lors des\n"
+        "livraisons d’emballages consignés à la condition que les\n"
+        "sommes engagées au titre de la\n"
+        "consignation soient distinctement mentionnées sur les factures et qu’elles ne donnent pas\n"
+        "lieu à facturation de la taxe sur la\n"
+        "valeur ajoutée. Lorsque les emballages n’ont pas été rendus au\n"
+        "terme des délais en usage dans\n"
+        "la profession, la taxe sur la valeur ajoutée est due sur le prix de\n"
+        "cession.\n"
+    ),
+    "332": (
+        "Art. 332.- 1) Est considéré comme fait\n"
+        "générateur de la taxe, le fait par lequel\n"
+        "sont réalisées les conditions légales\n"
+        "nécessaires pour l’exigibilité de la taxe.\n"
+        "2) Le fait générateur de la taxe sur la\n"
+        "valeur ajoutée est constitué :\n"
+        "a) pour les importations, par l’introduction pour la mise à la\n"
+        "consommation des biens sur le\n"
+        "territoire nigérien au sens douanier du terme ;\n"
+        "b) pour les livraisons de biens, par\n"
+        "la livraison des marchandises ou\n"
+        "produits ;\n"
+        "c) pour les prestations de services,\n"
+        "par l’accomplissement des services ;\n"
+        "d) pour les travaux immobiliers, par\n"
+        "l’exécution des travaux ;\n"
+        "e) pour les livraisons à soi-même,\n"
+        "par la première utilisation de\n"
+        "biens ou services ;\n"
+        "f) pour les opérations de crédit-bail, à la suite de l’encaissement\n"
+        "du loyer par le crédit-bailleur.\n"
+    ),
+    "363": (
+        "Art. 363.- 1) La taxe sur la valeur ajoutée\n"
+        "due sur les ventes de biens et les prestations de services rendues à travers les\n"
+        "plateformes de commerce en ligne, est\n"
+        "liquidée, déclarée et reversée par les\n"
+        "opérateurs desdites plateformes, pour\n"
+        "le compte des fournisseurs.\n"
+        "2) La taxe sur la valeur ajoutée due sur\n"
+        "les commissions perçues à l’occasion\n"
+        "des ventes qui sont effectuées en République du Niger à travers les plateformes de commerce en ligne, est déclarée et reversée par les opérateurs\n"
+        "desdites plateformes.\n"
+        "3) Aux fins d’accomplissement de leurs\n"
+        "obligations fiscales ci-dessus, les opérateurs des plateformes de commerce\n"
+        "en ligne sont tenus de s’immatriculer\n"
+        "auprès de l’Administration fiscale dans\n"
+        "les conditions prévues par les articles\n"
+        "774 et 775 du présent Code.\n"
+        "4) Sans préjudice des sanctions prévues aux articles 809 et 818 du présent\n"
+        "Code, le non-respect des obligations\n"
+        "prévues aux points 1 et 2 du présent\n"
+        "article donne lieu à la suspension de\n"
+        "l’accès à la plateforme à partir du territoire nigérien.\n"
+        "5) Les modalités de mise en œuvre des\n"
+        "présentes dispositions sont précisées\n"
+        "par voie réglementaire.\n"
+    ),
+    "372": (
+        "Art. 372.- 1) La base d’imposition des\n"
+        "droits d’accises est constituée :\n"
+        "a) à l’importation, par la valeur en\n"
+        "douane majorée des droits et taxes\n"
+        "perçus à l’entrée à l’exception de la\n"
+        "taxe sur la valeur ajoutée.\n"
+        "Dans le cas des cigarettes, la base ne\n"
+        "peut être inférieure à :\n"
+        "1° cinq cents (500) francs CFA\n"
+        "par paquet de vingt (20) tiges ;\n"
+        "2° cent (100) francs CFA par tige\n"
+        "pour les cigarettes non conditionnées en paquet de vingt\n"
+        "(20) ;\n"
+        "3° mille (1 000) francs CFA par\n"
+        "kilogramme pour les cigarettes en vrac.\n"
+        "b) en régime intérieur, par le prix de\n"
+        "vente sortie-usine, à l’exclusion\n"
+        "de la taxe sur la valeur ajoutée.\n"
+        "2) Sont exclues de la base d’imposition, les sommes perçues par l’assujetti à titre de consignation lors de la\n"
+        "livraison d’emballages récupérables et\n"
+        "réutilisables.\n"
+        "3) Lorsqu’une entreprise vendeuse et\n"
+        "une entreprise acheteuse sont, quelle\n"
+        "que soit leur forme juridique, dans la\n"
+        "dépendance l’une de l’autre, les droits\n"
+        "d’accises dus par la première sont assis\n"
+        "non sur la valeur des livraisons qu’elle\n"
+        "effectue à la seconde, mais sur le prix\n"
+        "de vente pratiqué par cette dernière.\n"
+    ),
+    "373": (
+        "Art. 373.- Les modalités de déclaration, de contrôle, de recouvrement\n"
+        "et de traitement du contentieux des\n"
+        "droits d’accises ainsi que les obligations et sanctions sont :\n"
+        "a) les mêmes qu’en matière de\n"
+        "taxe sur la valeur ajoutée pour\n"
+        "les taxes perçues par le service des impôts sur les produits\n"
+        "nationaux ;\n"
+        "b) les mêmes qu’en matière de\n"
+        "droits et taxes perçus en douane\n"
+        "pour le compte de la Direction\n"
+        "Générale des Impôts sur les produits importés.\n"
+    ),
+}
+
+nb_corriges = 0
+for art in articles:
+    if art["article_id"] in corrections:
+        art["text"] = corrections[art["article_id"]]
+        nb_corriges += 1
+        print(f"Article {art['article_id']} corrigé ({len(art['text'])} caractères).")
+
+with open(CHEMIN_FICHIER, "w", encoding="utf-8") as f:
+    json.dump(articles, f, ensure_ascii=False, indent=2)
+
+print(f"\n{nb_corriges}/10 articles corrigés (Lot 3).")
