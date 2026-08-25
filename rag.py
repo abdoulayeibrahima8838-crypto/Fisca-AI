@@ -234,13 +234,22 @@ def expand_via_refs(db, pivots, max_per_article=MAX_EXPANSION_PER_ARTICLE):
     candidats.sort(key=lambda c: -c[0])
     plafond = max_per_article * max(len(pivots), 1)
 
-    # Phase 5, Volet 4 : s'il reste de la place sous le plafond, completer
-    # avec les liens IMPLICITES (meme matiere fiscale + theme complementaire,
-    # ou procedures generales du meme theme) - avec un poids plus faible que
-    # les renvois explicites, puisque ce ne sont que des rapprochements
-    # deduits, pas des citations reelles du texte. Ignore silencieusement
-    # si les enrichissements Phase 5 ne sont pas charges (repli Phase 1 seul).
+    # Phase 5, Volet 4 : completer avec un PETIT NOMBRE de liens IMPLICITES
+    # (meme matiere fiscale + theme complementaire, ou procedures generales
+    # du meme theme) - avec un poids plus faible que les renvois explicites,
+    # puisque ce ne sont que des rapprochements deduits, pas des citations
+    # reelles du texte.
+    #
+    # IMPORTANT : plafond volontairement SEPARE et BAS (pas "jusqu'a
+    # remplir le plafond principal") - un article a souvent des dizaines
+    # de liens implicites (meme matiere, tous themes confondus), et les
+    # laisser remplir tout l'espace disponible a fait exploser le contexte
+    # envoye a Gemini en test (25 articles pour une simple question sur
+    # un taux). Les liens implicites doivent rester un COMPLEMENT discret,
+    # jamais la source principale de l'expansion.
+    MAX_LIENS_IMPLICITES_TOTAL = 3
     if len(candidats) < plafond:
+        nb_implicites_ajoutes = 0
         for p in pivots:
             meta = _METADONNEES_PAR_ARTICLE.get(p.article_id, {})
             liens = meta.get("liens_implicites", {})
@@ -253,9 +262,10 @@ def expand_via_refs(db, pivots, max_per_article=MAX_EXPANSION_PER_ARTICLE):
                     continue
                 seen.add(cible)
                 candidats.append((0.40, "LIEN_IMPLICITE", cible))
-                if len(candidats) >= plafond:
+                nb_implicites_ajoutes += 1
+                if nb_implicites_ajoutes >= MAX_LIENS_IMPLICITES_TOTAL or len(candidats) >= plafond:
                     break
-            if len(candidats) >= plafond:
+            if nb_implicites_ajoutes >= MAX_LIENS_IMPLICITES_TOTAL or len(candidats) >= plafond:
                 break
         candidats.sort(key=lambda c: -c[0])
 
