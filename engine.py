@@ -691,16 +691,68 @@ def repondre_rag(question_brute, db, historique=None):
 
     Depuis la Phase 3, utilise recherche_hybride (vectoriel + mots-cles,
     fusionnes par rang) au lieu du vectoriel seul, et une expansion des
-    renvois ponderee par type de relation (voir rag.py)."""
+    renvois ponderee par type de relation (voir rag.py).
+
+    Depuis la Phase 5 : si la question est jugee LARGE ("explique-moi
+    toute la taxe professionnelle") ET qu'elle nomme une matiere fiscale
+    connue, tente d'abord une reponse basee sur la FICHE recapitulative
+    de cette matiere (vue d'ensemble organisee par theme), avant de
+    retomber sur la recherche standard 5-articles si ca ne s'applique
+    pas ou echoue - aucun changement de comportement pour les questions
+    ciblees habituelles."""
     if not _gemini_client or not RAG_ACTIF:
         return None
 
     from rag import (
         embed_question, recherche_hybride, expand_via_refs,
         build_context_blocks, check_no_hallucinated_articles, call_gemini_llm,
+        est_question_large, detecter_matiere_dans_question, construire_contexte_fiche,
     )
 
     debut = time.time()
+
+    # --- Tentative "fiche" pour les questions larges (Phase 5) ---
+    if est_question_large(question_brute):
+        matiere = detecter_matiere_dans_question(question_brute)
+        if matiere:
+            try:
+                resultat_fiche = construire_contexte_fiche(matiere, db)
+            except Exception as e:
+                print(f"[Fisca AI][RAG][Fiche] Échec construction fiche ({type(e).__name__}: {e}) — repli sur la recherche standard.")
+                resultat_fiche = None
+            if resultat_fiche:
+                contexte_fiche, ids_fiche = resultat_fiche
+                prompt_fiche = (
+                    SYSTEM_PROMPT + "\n\n"
+                    "L'utilisateur pose une question large sur un impôt/une matière fiscale entière. "
+                    "Voici une vue d'ensemble structurée par thème :\n\n"
+                    f"{contexte_fiche}\n\nQuestion : {question_brute}"
+                )
+                try:
+                    reponse_texte = call_gemini_llm(
+                        _gemini_client, prompt_fiche, model=GEMINI_MODEL,
+                        max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS,
+                        timeout_secondes=GEMINI_TIMEOUT_SECONDS,
+                    )
+                    if reponse_texte.strip():
+                        duree = time.time() - debut
+                        suspects = check_no_hallucinated_articles(reponse_texte, ids_fiche)
+                        print(f"[Fisca AI][RAG][Fiche] SUCCÈS — matière={matiere}, durée={duree:.1f}s, suspects={suspects or 'aucun'}.")
+                        return {
+                            "niveau": 1,
+                            "reponse": reponse_texte.strip(),
+                            "source": f"Vue d'ensemble générée par l'IA (fiche {matiere}) — CGI 2026",
+                            "verified": not suspects,
+                            "question_comprise": question_brute,
+                            "moteur": "rag_fiche",
+                        }
+                except Exception as e:
+                    print(f"[Fisca AI][RAG][Fiche] Rédaction en échec ({type(e).__name__}: {e}) — repli sur la recherche standard.")
+                # Pas de "niveau 2" special pour la fiche : on retombe
+                # simplement sur le chemin standard ci-dessous plutot que
+                # d'inventer un texte brut de synthese qui n'existe pas.
+
+    # --- Chemin standard (question ciblee, ou fiche non applicable/en echec) ---
     try:
         vecteur_question = embed_question(_gemini_client, question_brute)
         pivots = recherche_hybride(db, vecteur_question, question_brute, top_k=5)
@@ -819,3 +871,4 @@ def repondre(question_brute, historique=None, db=None):
         "question_comprise": question_brute,
         "moteur": "indisponible",
     }
+
