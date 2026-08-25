@@ -50,6 +50,10 @@ SYNONYMES = {
 
     # --- Administration / procédures ---
     "numéro d'identification fiscale": ["nif"],
+    "régime réel normal d'imposition": ["nif r", "nif-r"],
+    "régime réel simplifié d'imposition": ["nif s", "nif-s"],
+    "régime de l'impôt forfaitaire": ["nif p", "nif-p"],
+    "régimes particuliers d'imposition": ["nif a", "nif-a", "nif c", "nif-c"],
     "direction générale des impôts": ["dgi"],
     "avis de mise en recouvrement": ["amr"],
     "attestation de régularité fiscale": ["arf", "quitus fiscal", "certificat de régularité"],
@@ -159,3 +163,4 @@ def elargir_question(question):
         return question
 
     return question + " " + " ".join(sorted(termes_trouves))
+
