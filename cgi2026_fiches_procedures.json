@@ -1,0 +1,1001 @@
+[
+  {
+    "matiere_fiscale": "Procédures - Contrôle",
+    "nombre_articles": 30,
+    "sections": [
+      {
+        "section": "Droit de communication",
+        "articles": [
+          "631",
+          "632",
+          "633",
+          "634",
+          "635"
+        ]
+      },
+      {
+        "section": "Droit d’enquête",
+        "articles": [
+          "636"
+        ]
+      },
+      {
+        "section": "Droit de visite et de saisie",
+        "articles": [
+          "637"
+        ]
+      },
+      {
+        "section": "Procédure d’identification des marchandises et",
+        "articles": [
+          "638",
+          "639"
+        ]
+      },
+      {
+        "section": "Flagrance fiscale",
+        "articles": [
+          "640",
+          "641",
+          "642"
+        ]
+      },
+      {
+        "section": "Contrôle formel",
+        "articles": [
+          "644"
+        ]
+      },
+      {
+        "section": "Contrôle sur pièces",
+        "articles": [
+          "645"
+        ]
+      },
+      {
+        "section": "Vérification de comptabilité",
+        "articles": [
+          "647",
+          "648",
+          "649",
+          "650",
+          "651",
+          "652",
+          "653",
+          "654",
+          "655",
+          "656",
+          "657",
+          "658"
+        ]
+      },
+      {
+        "section": "Examen Contradictoire de la Situation Fiscale",
+        "articles": [
+          "659",
+          "660",
+          "661"
+        ]
+      },
+      {
+        "section": "Dispositions non sectionnées",
+        "articles": [
+          "643"
+        ]
+      }
+    ]
+  },
+  {
+    "matiere_fiscale": "Procédures - Recouvrement",
+    "nombre_articles": 69,
+    "sections": [
+      {
+        "section": "Titres exécutoires",
+        "articles": [
+          "704",
+          "705",
+          "706"
+        ]
+      },
+      {
+        "section": "Modalités de paiement",
+        "articles": [
+          "707",
+          "708",
+          "709",
+          "710",
+          "711"
+        ]
+      },
+      {
+        "section": "Prescription de l’action en recouvrement",
+        "articles": [
+          "712",
+          "713"
+        ]
+      },
+      {
+        "section": "Paiement indu d’impôt, droit ou taxe",
+        "articles": [
+          "714"
+        ]
+      },
+      {
+        "section": "Dispositions communes aux poursuites",
+        "articles": [
+          "715",
+          "716",
+          "717",
+          "718",
+          "719",
+          "720",
+          "721",
+          "722"
+        ]
+      },
+      {
+        "section": "Mesures de poursuites de droit commun",
+        "articles": [
+          "723",
+          "724",
+          "725",
+          "726",
+          "727",
+          "728",
+          "729",
+          "730",
+          "731",
+          "732",
+          "733",
+          "734",
+          "735",
+          "736",
+          "737",
+          "738",
+          "739",
+          "740",
+          "741",
+          "742",
+          "743",
+          "744",
+          "745"
+        ]
+      },
+      {
+        "section": "Mesures particulières de poursuites",
+        "articles": [
+          "746",
+          "747",
+          "748",
+          "749",
+          "750",
+          "751",
+          "752",
+          "753",
+          "754"
+        ]
+      },
+      {
+        "section": "Frais de poursuites",
+        "articles": [
+          "755",
+          "756"
+        ]
+      },
+      {
+        "section": "Privilège du Trésor",
+        "articles": [
+          "757",
+          "758",
+          "759",
+          "760",
+          "761"
+        ]
+      },
+      {
+        "section": "Hypothèque légale d",
+        "articles": [
+          "762",
+          "763",
+          "764",
+          "765"
+        ]
+      },
+      {
+        "section": "Solidarité de paiement",
+        "articles": [
+          "766",
+          "767",
+          "768",
+          "769",
+          "770",
+          "771",
+          "772"
+        ]
+      }
+    ]
+  },
+  {
+    "matiere_fiscale": "Procédures - Sanctions",
+    "nombre_articles": 31,
+    "sections": [
+      {
+        "section": "Pénalités d’assiette",
+        "articles": [
+          "809",
+          "810",
+          "811"
+        ]
+      },
+      {
+        "section": "Pénalités de recouvrement",
+        "articles": [
+          "812",
+          "813"
+        ]
+      },
+      {
+        "section": "Sanctions relatives",
+        "articles": [
+          "814",
+          "815"
+        ]
+      },
+      {
+        "section": "Sanctions relatives à",
+        "articles": [
+          "816",
+          "817"
+        ]
+      },
+      {
+        "section": "Sanctions relatives au non respect des obligations",
+        "articles": [
+          "818",
+          "819",
+          "820",
+          "821",
+          "822",
+          "823",
+          "824",
+          "825",
+          "826",
+          "827",
+          "828"
+        ]
+      },
+      {
+        "section": "Autres sanctions fiscales",
+        "articles": [
+          "829",
+          "830"
+        ]
+      },
+      {
+        "section": "Définition des infractions",
+        "articles": [
+          "831",
+          "832",
+          "833",
+          "834",
+          "835",
+          "836",
+          "837"
+        ]
+      },
+      {
+        "section": "Engagement des procédures pénales",
+        "articles": [
+          "838",
+          "839"
+        ]
+      }
+    ]
+  },
+  {
+    "matiere_fiscale": "Procédures - Contentieux",
+    "nombre_articles": 8,
+    "sections": [
+      {
+        "section": "Contentieux de l’assiette",
+        "articles": [
+          "693",
+          "694",
+          "695",
+          "696",
+          "697",
+          "699"
+        ]
+      },
+      {
+        "section": "Contentieux du recouvrement",
+        "articles": [
+          "700",
+          "701"
+        ]
+      }
+    ]
+  },
+  {
+    "matiere_fiscale": "Procédures - Garanties du contribuable",
+    "nombre_articles": 12,
+    "sections": [
+      {
+        "section": "Conséquences des i",
+        "articles": [
+          "675"
+        ]
+      },
+      {
+        "section": "Délais de reprise",
+        "articles": [
+          "676",
+          "677",
+          "678",
+          "679",
+          "680",
+          "681"
+        ]
+      },
+      {
+        "section": "Opposabilité de la doctrine fiscale",
+        "articles": [
+          "682"
+        ]
+      },
+      {
+        "section": "Rescrit fiscal",
+        "articles": [
+          "683"
+        ]
+      },
+      {
+        "section": "Secret professionnel",
+        "articles": [
+          "684",
+          "685",
+          "686"
+        ]
+      }
+    ]
+  },
+  {
+    "matiere_fiscale": "Procédures - Obligations déclaratives",
+    "nombre_articles": 16,
+    "sections": [
+      {
+        "section": "Dispositions générales",
+        "articles": [
+          "783",
+          "784"
+        ]
+      },
+      {
+        "section": "Déclarations annuelles",
+        "articles": [
+          "785",
+          "786",
+          "787",
+          "788",
+          "789",
+          "790",
+          "791",
+          "792",
+          "793",
+          "794",
+          "795",
+          "796",
+          "797",
+          "798"
+        ]
+      }
+    ]
+  },
+  {
+    "matiere_fiscale": "Procédures - Identification",
+    "nombre_articles": 9,
+    "sections": [
+      {
+        "section": "Déclaration d’existence et immatriculation fiscale",
+        "articles": [
+          "774",
+          "775",
+          "776",
+          "777",
+          "778",
+          "779",
+          "780"
+        ]
+      },
+      {
+        "section": "Représentation des",
+        "articles": [
+          "781",
+          "782"
+        ]
+      }
+    ]
+  },
+  {
+    "matiere_fiscale": "Procédures - Rectification",
+    "nombre_articles": 13,
+    "sections": [
+      {
+        "section": "Procédure de rectification contradictoire",
+        "articles": [
+          "663",
+          "664",
+          "665",
+          "666",
+          "667",
+          "668",
+          "669",
+          "670"
+        ]
+      },
+      {
+        "section": "Procédure de taxation d’office",
+        "articles": [
+          "671",
+          "672",
+          "673",
+          "674"
+        ]
+      },
+      {
+        "section": "Dispositions non sectionnées",
+        "articles": [
+          "662"
+        ]
+      }
+    ]
+  },
+  {
+    "matiere_fiscale": "Droits d'enregistrement",
+    "nombre_articles": 188,
+    "sections": [
+      {
+        "section": "Actes soumis à l’enregistrement",
+        "articles": [
+          "435",
+          "436"
+        ]
+      },
+      {
+        "section": "Exonérations - Exemptions",
+        "articles": [
+          "437"
+        ]
+      },
+      {
+        "section": "Territorialité",
+        "articles": [
+          "438",
+          "439"
+        ]
+      },
+      {
+        "section": "Fait générateur et exigibilité",
+        "articles": [
+          "440"
+        ]
+      },
+      {
+        "section": "Base d’imposition",
+        "articles": [
+          "441",
+          "442"
+        ]
+      },
+      {
+        "section": "Valeur de la nue-propriété et de l’usufruit",
+        "articles": [
+          "443"
+        ]
+      },
+      {
+        "section": "Dispositions dépendantes ou indépendantes",
+        "articles": [
+          "444",
+          "445"
+        ]
+      },
+      {
+        "section": "Mutations à titre onéreux",
+        "articles": [
+          "449",
+          "450",
+          "451",
+          "452",
+          "453",
+          "454",
+          "455",
+          "456",
+          "457",
+          "458",
+          "459",
+          "460",
+          "461",
+          "462"
+        ]
+      },
+      {
+        "section": "Baux",
+        "articles": [
+          "463",
+          "464",
+          "465"
+        ]
+      },
+      {
+        "section": "Partages",
+        "articles": [
+          "466",
+          "467"
+        ]
+      },
+      {
+        "section": "Rentes",
+        "articles": [
+          "468",
+          "469"
+        ]
+      },
+      {
+        "section": "Commande publique",
+        "articles": [
+          "470",
+          "471"
+        ]
+      },
+      {
+        "section": "Contrats de mariage",
+        "articles": [
+          "472",
+          "473"
+        ]
+      },
+      {
+        "section": "Actes judiciaires – Jugements",
+        "articles": [
+          "474",
+          "475",
+          "476",
+          "477"
+        ]
+      },
+      {
+        "section": "Actes divers",
+        "articles": [
+          "478",
+          "479"
+        ]
+      },
+      {
+        "section": "Délais pour enregistrer",
+        "articles": [
+          "481"
+        ]
+      },
+      {
+        "section": "Service des impôts",
+        "articles": [
+          "482",
+          "483"
+        ]
+      },
+      {
+        "section": "Redevables des droits",
+        "articles": [
+          "484",
+          "485",
+          "486",
+          "487"
+        ]
+      },
+      {
+        "section": "Modalités de paiement",
+        "articles": [
+          "488",
+          "489",
+          "490",
+          "491",
+          "492",
+          "493",
+          "494",
+          "495",
+          "496"
+        ]
+      },
+      {
+        "section": "Restitution",
+        "articles": [
+          "497"
+        ]
+      },
+      {
+        "section": "Obligations des redevables",
+        "articles": [
+          "498",
+          "499",
+          "500"
+        ]
+      },
+      {
+        "section": "Obligations des officiers ministériels",
+        "articles": [
+          "501",
+          "502",
+          "503",
+          "504",
+          "505",
+          "506",
+          "507",
+          "508",
+          "509",
+          "510",
+          "511",
+          "512",
+          "513",
+          "514",
+          "515",
+          "516"
+        ]
+      },
+      {
+        "section": "Détermination de l’assiette",
+        "articles": [
+          "518",
+          "519",
+          "520",
+          "521",
+          "522",
+          "523",
+          "524",
+          "525",
+          "526",
+          "527",
+          "528",
+          "529",
+          "530",
+          "531"
+        ]
+      },
+      {
+        "section": "Tarif et liquidation des droits",
+        "articles": [
+          "532",
+          "533",
+          "534"
+        ]
+      },
+      {
+        "section": "Obligations",
+        "articles": [
+          "535",
+          "536",
+          "537",
+          "538",
+          "539",
+          "540"
+        ]
+      },
+      {
+        "section": "Actes soumis au droit de timbre",
+        "articles": [
+          "541"
+        ]
+      },
+      {
+        "section": "Exemptions",
+        "articles": [
+          "542",
+          "543"
+        ]
+      },
+      {
+        "section": "Redevables",
+        "articles": [
+          "544",
+          "545",
+          "546",
+          "547"
+        ]
+      },
+      {
+        "section": "Timbres de dimension",
+        "articles": [
+          "548",
+          "549",
+          "550",
+          "551",
+          "552",
+          "553",
+          "554"
+        ]
+      },
+      {
+        "section": "Timbre proportionnel sur les effets",
+        "articles": [
+          "555",
+          "556",
+          "557",
+          "558",
+          "559"
+        ]
+      },
+      {
+        "section": "Timbre – quittance",
+        "articles": [
+          "560"
+        ]
+      },
+      {
+        "section": "Timbres d’actes",
+        "articles": [
+          "561",
+          "562",
+          "563",
+          "564",
+          "565",
+          "566",
+          "567",
+          "568",
+          "569",
+          "570",
+          "571",
+          "572",
+          "573",
+          "574",
+          "575",
+          "576",
+          "577",
+          "578",
+          "579",
+          "580",
+          "581",
+          "582",
+          "583",
+          "584",
+          "585"
+        ]
+      },
+      {
+        "section": "Dispositions générales",
+        "articles": [
+          "586",
+          "587",
+          "588"
+        ]
+      },
+      {
+        "section": "Modes d’oblitération des timbres fiscaux",
+        "articles": [
+          "589",
+          "590"
+        ]
+      },
+      {
+        "section": "Paiement sur états",
+        "articles": [
+          "591",
+          "592"
+        ]
+      },
+      {
+        "section": "Emploi des machines à timbrer",
+        "articles": [
+          "593",
+          "594",
+          "595",
+          "596"
+        ]
+      },
+      {
+        "section": "Obligations générales",
+        "articles": [
+          "597",
+          "598",
+          "599",
+          "600",
+          "601",
+          "602",
+          "603",
+          "604",
+          "605"
+        ]
+      },
+      {
+        "section": "Distributeurs auxiliaires de timbres",
+        "articles": [
+          "606",
+          "607"
+        ]
+      },
+      {
+        "section": "Aliénés mentaux",
+        "articles": [
+          "615"
+        ]
+      },
+      {
+        "section": "Rectification de casier judiciaire",
+        "articles": [
+          "616"
+        ]
+      },
+      {
+        "section": "Responsabilité civile des communes",
+        "articles": [
+          "617"
+        ]
+      },
+      {
+        "section": "Contentieux administratif",
+        "articles": [
+          "618"
+        ]
+      },
+      {
+        "section": "Conseil d’État",
+        "articles": [
+          "619"
+        ]
+      },
+      {
+        "section": "Faillite - Jugement déclaratif - Insuffisance des",
+        "articles": [
+          "620"
+        ]
+      },
+      {
+        "section": "Police simple, correctionnelle et criminelle",
+        "articles": [
+          "621"
+        ]
+      },
+      {
+        "section": "Dispositions non sectionnées",
+        "articles": [
+          "434",
+          "446",
+          "447",
+          "448",
+          "480",
+          "517",
+          "608",
+          "609",
+          "610",
+          "611",
+          "612",
+          "613",
+          "614"
+        ]
+      }
+    ]
+  },
+  {
+    "matiere_fiscale": "Régimes spéciaux et incitations fiscales",
+    "nombre_articles": 38,
+    "sections": [
+      {
+        "section": "Régime fiscal applicable aux investissements",
+        "articles": [
+          "840",
+          "841",
+          "842",
+          "843"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux Contrats de partenariat public-privé",
+        "articles": [
+          "844",
+          "845",
+          "846"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux marchés publics financés sur fonds extérieurs",
+        "articles": [
+          "847",
+          "848",
+          "849",
+          "850"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux organismes à caractère coopératif",
+        "articles": [
+          "851"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux Organisations Non Gouvernementales, Associations de Développement et Regroupements Légalement Reconnus",
+        "articles": [
+          "852"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux combustibles utilisés par la NIGELEC",
+        "articles": [
+          "853"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable à la Centrale d’Approvisionnement en Intrants et Matériels Agricoles (CAIMA)",
+        "articles": [
+          "854"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable au Programme Kandadji",
+        "articles": [
+          "855"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable à l’Office des Produits Vivriers du Niger",
+        "articles": [
+          "856"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable au Fonds d’Entretien Routier",
+        "articles": [
+          "857"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux institutions mutualistes ou coopératives d’épargne et de crédit",
+        "articles": [
+          "858"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux entreprises pétrolières",
+        "articles": [
+          "859",
+          "860",
+          "861"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux entreprises minières",
+        "articles": [
+          "862",
+          "863",
+          "864",
+          "865",
+          "866",
+          "867",
+          "868",
+          "869",
+          "870",
+          "871",
+          "872"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable à la Société Nigérienne de Charbon (SONICHAR)",
+        "articles": [
+          "873",
+          "874",
+          "875"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux auxiliaires de justice",
+        "articles": [
+          "876"
+        ]
+      },
+      {
+        "section": "Régime fiscal applicable aux mutuelles de santé",
+        "articles": [
+          "877"
+        ]
+      }
+    ]
+  }
+]
