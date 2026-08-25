@@ -29,6 +29,8 @@ from dataclasses import dataclass, field
 
 from google.genai import types as genai_types
 
+from vocabulaire import elargir_question
+
 
 TOP_K_VECTOR = 5          # nb d'articles récupérés par similarité vectorielle
 TOP_K_MOTS_CLES = 5       # nb d'articles récupérés par recherche mots-clés
@@ -56,7 +58,13 @@ def _charger_json_optionnel(nom_fichier):
         return None
 
 
-_articles_enrichis = _charger_json_optionnel("cgi2026_articles_enrichis.json")
+_articles_enrichis = _charger_json_optionnel("cgi2026_articles_complet.json")
+_SOURCE_METADONNEES = "complet (Phase 5)"
+if _articles_enrichis is None:
+    # Repli : le fichier cumulatif Phase 5 n'est pas encore deploye -
+    # on continue avec les seules metadonnees Phase 1, comme avant.
+    _articles_enrichis = _charger_json_optionnel("cgi2026_articles_enrichis.json")
+    _SOURCE_METADONNEES = "enrichis (Phase 1 seule)"
 _METADONNEES_PAR_ARTICLE = (
     {a["article_id"]: a for a in _articles_enrichis} if _articles_enrichis else {}
 )
@@ -67,10 +75,19 @@ _POIDS_RELATIONS = (
     if _refs_enrichis else {}
 )
 
+# Fiches par impot (Phase 5, Volet 3) - utilisees pour les questions LARGES
+# ("explique-moi toute la taxe professionnelle"), en complement de la
+# recherche article-par-article habituelle.
+_fiches_par_impot = _charger_json_optionnel("cgi2026_fiches_par_impot.json")
+_FICHES_PAR_MATIERE = (
+    {f["matiere_fiscale"]: f for f in _fiches_par_impot} if _fiches_par_impot else {}
+)
+
 print(
     f"[Fisca AI][RAG] Enrichissements chargés : "
-    f"{len(_METADONNEES_PAR_ARTICLE)} article(s) avec métadonnées Phase 1, "
-    f"{len(_POIDS_RELATIONS)} relation(s) qualifiées Phase 2."
+    f"{len(_METADONNEES_PAR_ARTICLE)} article(s) — source : {_SOURCE_METADONNEES}, "
+    f"{len(_POIDS_RELATIONS)} relation(s) qualifiées Phase 2, "
+    f"{len(_FICHES_PAR_MATIERE)} fiche(s) par impôt (Phase 5)."
 )
 
 
@@ -150,11 +167,19 @@ def recherche_hybride(db, query_embedding, question, top_k=TOP_K_VECTOR):
     combiner deux classements sans avoir a normaliser des echelles de
     score incompatibles (distance cosinus vs score de pertinence textuel).
     Chaque article marque points = 1/(60+rang) dans chaque liste ou il
-    apparait ; les scores sont ensuite additionnes et retries."""
+    apparait ; les scores sont ensuite additionnes et retries.
+
+    Depuis la Phase 4, la recherche par mots-cles utilise la question
+    ELARGIE (synonymes/vocabulaire naturel - voir vocabulaire.py) : une
+    question contenant "IS" ou "facture electronique" retrouve aussi les
+    articles qui emploient les termes officiels du CGI ("impot sur les
+    societes", "systeme electronique certifie de facturation")."""
     K_RRF = 60
 
+    question_elargie = elargir_question(question)
+
     resultats_vecteur = search_pivot_articles(db, query_embedding, top_k=top_k * 2)
-    resultats_mots_cles = search_keywords(db, question, top_k=top_k * 2)
+    resultats_mots_cles = search_keywords(db, question_elargie, top_k=top_k * 2)
 
     articles_par_id = {}
     scores = {}
@@ -207,7 +232,34 @@ def expand_via_refs(db, pivots, max_per_article=MAX_EXPANSION_PER_ARTICLE):
     # derogations) passent avant les renvois generiques, meme si ceux-ci ont
     # ete trouves en premier dans le texte.
     candidats.sort(key=lambda c: -c[0])
-    candidats = candidats[: max_per_article * max(len(pivots), 1)]
+    plafond = max_per_article * max(len(pivots), 1)
+
+    # Phase 5, Volet 4 : s'il reste de la place sous le plafond, completer
+    # avec les liens IMPLICITES (meme matiere fiscale + theme complementaire,
+    # ou procedures generales du meme theme) - avec un poids plus faible que
+    # les renvois explicites, puisque ce ne sont que des rapprochements
+    # deduits, pas des citations reelles du texte. Ignore silencieusement
+    # si les enrichissements Phase 5 ne sont pas charges (repli Phase 1 seul).
+    if len(candidats) < plafond:
+        for p in pivots:
+            meta = _METADONNEES_PAR_ARTICLE.get(p.article_id, {})
+            liens = meta.get("liens_implicites", {})
+            candidats_implicites = []
+            for cibles in liens.get("meme_matiere_autres_themes", {}).values():
+                candidats_implicites.extend(cibles)
+            candidats_implicites.extend(liens.get("procedures_generales_meme_theme", []))
+            for cible in candidats_implicites:
+                if cible in seen:
+                    continue
+                seen.add(cible)
+                candidats.append((0.40, "LIEN_IMPLICITE", cible))
+                if len(candidats) >= plafond:
+                    break
+            if len(candidats) >= plafond:
+                break
+        candidats.sort(key=lambda c: -c[0])
+
+    candidats = candidats[:plafond]
 
     linked = []
     for poids, type_relation, cible in candidats:
@@ -231,24 +283,121 @@ def expand_via_refs(db, pivots, max_per_article=MAX_EXPANSION_PER_ARTICLE):
     return linked
 
 
+def _bloc_exceptions(article_id):
+    """Phase 5, Volet 2 : si l'article a des passages conditionnels isoles
+    (toutefois, sauf, par derogation...), les met en evidence separement -
+    pour que le LLM ne donne pas la regle generale en oubliant sa
+    derogation. Retourne une chaine vide si aucun enrichissement charge ou
+    aucune exception pour cet article (comportement inchange sinon)."""
+    meta = _METADONNEES_PAR_ARTICLE.get(article_id)
+    if not meta:
+        return ""
+    passages = meta.get("passages_conditionnels") or []
+    if not passages:
+        return ""
+    lignes = ["  ⚠️ Exception(s)/dérogation(s) à ne pas oublier dans cet article :"]
+    for p in passages[:3]:  # plafonne pour ne pas alourdir le prompt sur les articles tres charges
+        lignes.append(f"  - {p['phrase']}")
+    return "\n".join(lignes) + "\n"
+
+
 def build_context_blocks(pivots, linked):
     """Étape 3 : construit le contexte envoyé au LLM avec des blocs distincts,
     pour que le modèle distingue la source principale des sources d'appui.
     Les articles liés affichent leur type de relation (SANCTIONNE_PAR,
     DEFINI_PAR...) quand connu - ça aide le LLM à comprendre POURQUOI cet
-    article est pertinent, pas juste QU'IL l'est."""
+    article est pertinent, pas juste QU'IL l'est.
+
+    Depuis la Phase 5, met egalement en evidence les exceptions/derogations
+    deja isolees pour chaque article (Volet 2), pour reduire le risque
+    d'une reponse qui donne la regle generale sans mentionner sa
+    derogation."""
     blocks = ["ARTICLES PRINCIPAUX (correspondance directe à la question) :\n"]
     for a in pivots:
-        blocks.append(f"[Art. {a.article_id}] ({a.chapitre_titre or a.livre_titre})\n{a.text}\n")
+        blocks.append(f"[Art. {a.article_id}] ({a.chapitre_titre or a.livre_titre})\n{a.text}\n{_bloc_exceptions(a.article_id)}")
     if linked:
         blocks.append("\nARTICLES LIÉS (référencés explicitement par les articles ci-dessus) :\n")
         for a in linked:
             etiquette_relation = f" — relation : {a.type_relation}" if a.type_relation and a.type_relation != "RENVOIE_A" else ""
-            blocks.append(f"[Art. {a.article_id}] ({a.chapitre_titre or a.livre_titre}){etiquette_relation}\n{a.text}\n")
+            blocks.append(f"[Art. {a.article_id}] ({a.chapitre_titre or a.livre_titre}){etiquette_relation}\n{a.text}\n{_bloc_exceptions(a.article_id)}")
     return "\n".join(blocks)
 
 
 RE_CITED_ARTICLE = re.compile(r"[Aa]rticle\s+(\d+)\s*(bis|ter|quater)?", re.IGNORECASE)
+
+
+# ---------------------------------------------------------------------------
+# Phase 5, Volet 3 : fiches par impot, pour les questions LARGES ("explique-
+# moi toute la taxe professionnelle") que la recherche standard (5 articles
+# les plus proches) gere mal. Contexte STRICTEMENT plafonne : jamais question
+# d'envoyer les 206 articles d'une grosse matiere comme "Domaines" - un
+# article representatif par theme, les autres juste listes par numero.
+# ---------------------------------------------------------------------------
+MOTS_QUESTION_LARGE = [
+    "explique", "expliquer", "expliques", "tout sur", "comment fonctionne",
+    "vue d'ensemble", "en général", "de manière générale", "présente-moi",
+    "parle-moi de", "qu'est-ce que",
+]
+MAX_ARTICLES_TEXTE_PAR_THEME = 1  # nb d'articles au texte complet recupere par theme
+
+
+def detecter_matiere_dans_question(question):
+    """Cherche si le nom d'une matière fiscale connue (Phase 1/5) apparaît
+    dans la question - condition necessaire (mais pas suffisante seule)
+    pour proposer une fiche plutot que la recherche standard."""
+    question_lower = question.lower()
+    for matiere in _FICHES_PAR_MATIERE:
+        mots_matiere = [m for m in matiere.lower().split() if len(m) > 3]
+        if mots_matiere and all(m in question_lower for m in mots_matiere):
+            return matiere
+    return None
+
+
+def est_question_large(question):
+    question_lower = question.lower()
+    return any(m in question_lower for m in MOTS_QUESTION_LARGE)
+
+
+def construire_contexte_fiche(matiere_fiscale, db, max_articles_par_theme=MAX_ARTICLES_TEXTE_PAR_THEME):
+    """Construit un contexte de synthese a partir d'une fiche par impot.
+    Pour chaque theme, recupere le texte d'un nombre PLAFONNE d'articles
+    representatifs ; les autres articles du meme theme sont juste listes
+    par numero, sans leur texte - pour ne jamais faire exploser la taille
+    du prompt sur les grosses matieres (ex. Domaines, 206 articles).
+
+    Retourne (contexte_texte, liste_des_ids_avec_texte_complet) ou None si
+    aucune fiche n'existe pour cette matiere (Phase 5 non chargee)."""
+    fiche = _FICHES_PAR_MATIERE.get(matiere_fiscale)
+    if not fiche:
+        return None
+
+    blocs = [f"VUE D'ENSEMBLE — {matiere_fiscale} ({fiche['nombre_articles']} articles au total, question large détectée) :\n"]
+    ids_avec_texte = []
+
+    for section in fiche["sections"]:
+        theme = section["theme"]
+        ids = section["articles"]
+        a_recuperer = ids[:max_articles_par_theme]
+        reste = ids[max_articles_par_theme:]
+
+        blocs.append(f"\n--- {theme} ---")
+        for aid in a_recuperer:
+            cur = db.cursor()
+            cur.execute("SELECT text FROM cgi_articles WHERE article_id = %s", (aid,))
+            row = cur.fetchone()
+            if row:
+                blocs.append(f"[Art. {aid}]\n{row['text']}")
+                ids_avec_texte.append(aid)
+        if reste:
+            blocs.append(f"(Autres articles de ce thème, non détaillés ici : {', '.join(reste)})")
+
+    if fiche["procedures_generales_associees"]:
+        blocs.append(
+            f"\nProcédures générales associées (sanctions, recouvrement) : "
+            f"{', '.join(fiche['procedures_generales_associees'])}"
+        )
+
+    return "\n".join(blocs), ids_avec_texte
 
 
 def check_no_hallucinated_articles(answer_text, context_article_ids):
@@ -338,3 +487,4 @@ def answer_query(db, user_question, embed_fn, llm_fn):
         "sources": all_ids,
         "suspects": suspects,
     }
+
