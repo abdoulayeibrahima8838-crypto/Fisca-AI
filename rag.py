@@ -183,9 +183,31 @@ def recherche_hybride(db, query_embedding, question, top_k=TOP_K_VECTOR):
     petit, il ne peut pas faire remonter un article hors-sujet)."""
     K_RRF = 60
     BONUS_MATIERE_FISCALE = 0.01  # petit, ne fait que departager, jamais dominer le classement
+    BONUS_THEME_CIBLE = 0.05  # plus fort : sert a departager face a un article tres
+                                # dominant sur un terme generique (ex. "NIF" -> art. 775,
+                                # qui definit le NIF lui-meme et ecrase tout le reste sans ce coup de pouce)
+
+    # Themes cibles : quand la question elargie contient un de ces termes
+    # tres specifiques, les articles du THEME correspondant recoivent un
+    # bonus plus fort que le simple bonus de matiere fiscale - utile pour
+    # les cas ou un article generique (ex. definir le NIF) domine sinon
+    # systematiquement un article plus specifique mais moins "dense" en
+    # mots-cles (ex. l'article qui definit vraiment un regime precis).
+    THEMES_CIBLES = {
+        "Régimes d'imposition": [
+            "régime réel normal d'imposition", "régime réel simplifié d'imposition",
+            "régime du forfait", "régimes particuliers d'imposition",
+        ],
+    }
 
     question_elargie = elargir_question(question)
     matiere_detectee = detecter_matiere_dans_question(question)
+
+    theme_cible = None
+    for theme, termes_declencheurs in THEMES_CIBLES.items():
+        if any(t in question_elargie.lower() for t in termes_declencheurs):
+            theme_cible = theme
+            break
 
     resultats_vecteur = search_pivot_articles(db, query_embedding, top_k=top_k * 2)
     resultats_mots_cles = search_keywords(db, question_elargie, top_k=top_k * 2)
@@ -205,6 +227,13 @@ def recherche_hybride(db, query_embedding, question, top_k=TOP_K_VECTOR):
         for article_id, a in articles_par_id.items():
             if a.matiere_fiscale == matiere_detectee:
                 scores[article_id] = scores.get(article_id, 0.0) + BONUS_MATIERE_FISCALE
+
+    if theme_cible:
+        for article_id in articles_par_id:
+            meta = _METADONNEES_PAR_ARTICLE.get(article_id, {})
+            theme_article = (meta.get("themes") or {}).get("principal")
+            if theme_article == theme_cible:
+                scores[article_id] = scores.get(article_id, 0.0) + BONUS_THEME_CIBLE
 
     classement = sorted(scores.items(), key=lambda x: -x[1])[:top_k]
     resultat = []
