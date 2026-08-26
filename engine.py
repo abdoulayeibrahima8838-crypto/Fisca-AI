@@ -74,6 +74,16 @@ SYSTEM_PROMPT = (
     "vraiment plusieurs points distincts (ex. une liste de sanctions). "
     "Ta reponse doit TOUJOURS etre complete et jamais coupee en plein "
     "milieu d'une phrase ou d'une idee.\n\n"
+    "UTILISATION DES BLOCS DE CONTEXTE :\n"
+    "- Le contexte qui t'est fourni est organise en blocs distincts "
+    "(ARTICLES PRINCIPAUX, SANCTIONS APPLICABLES, EXCEPTIONS ET "
+    "DEROGATIONS, PROCEDURES LIEES, AUTRES ARTICLES LIES). Si un bloc "
+    "SANCTIONS APPLICABLES est present, mentionne systematiquement la "
+    "sanction encourue dans ta reponse, meme si la question ne la "
+    "demande pas explicitement - c'est une information que le "
+    "contribuable doit connaitre. Si un bloc EXCEPTIONS ET DEROGATIONS "
+    "est present, mentionne-le aussi explicitement plutot que de donner "
+    "seulement la regle generale.\n\n"
     "REGLE DE PERIMETRE STRICTE :\n"
     "- Tu ne repond qu'a des questions sur la fiscalite nigerienne et la "
     "facture certifiee. Si on te demande de rediger un texte long, un "
@@ -683,6 +693,26 @@ def repondre_locale(question_brute):
 # ---------------------------------------------------------------------------
 RAG_ACTIF = os.environ.get("RAG_ACTIF", "0") == "1"
 
+# Point #12 du plan initial : normalisation de la question par un appel
+# Gemini supplementaire avant la recherche. COUTE DU QUOTA a chaque
+# question - desactive par defaut, a activer uniquement une fois le
+# paiement regle et le volume d'usage reel evalue.
+NORMALISATION_ACTIVE = os.environ.get("NORMALISATION_ACTIF", "0") == "1"
+
+# Point #15 du plan initial : reranker par IA. COUTE DU QUOTA a chaque
+# question (un appel Gemini supplementaire) - desactive par defaut.
+RERANKER_ACTIVE = os.environ.get("RERANKER_ACTIF", "0") == "1"
+
+# Point #24 du plan initial : dossier fiscal virtuel (version structuree
+# de la normalisation #12). COUTE DU QUOTA - desactive par defaut. Ne pas
+# activer en meme temps que NORMALISATION_ACTIVE : les deux enrichissent
+# la question de facon similaire, un seul suffit selon le niveau choisi.
+DOSSIER_VIRTUEL_ACTIVE = os.environ.get("DOSSIER_VIRTUEL_ACTIF", "0") == "1"
+
+# Point #25 du plan initial : recherche multi-etapes. COUTE DU QUOTA
+# (un appel Gemini supplementaire) - desactive par defaut.
+MULTI_HOP_ACTIVE = os.environ.get("MULTI_HOP_ACTIF", "0") == "1"
+
 
 def repondre_rag(question_brute, db, historique=None):
     """Tente une reponse via le RAG maison. Voir le commentaire d'archi-
@@ -754,12 +784,31 @@ def repondre_rag(question_brute, db, historique=None):
 
     # --- Chemin standard (question ciblee, ou fiche non applicable/en echec) ---
     try:
-        vecteur_question = embed_question(_gemini_client, question_brute)
-        pivots = recherche_hybride(db, vecteur_question, question_brute, top_k=5)
+        from rag import normaliser_question, construire_dossier_fiscal_virtuel, dossier_vers_texte_recherche
+
+        question_pour_recherche = question_brute
+        if DOSSIER_VIRTUEL_ACTIVE:
+            # Version structuree (#24), prioritaire si les deux sont actifs
+            dossier = construire_dossier_fiscal_virtuel(_gemini_client, question_brute, model=GEMINI_MODEL)
+            question_pour_recherche = dossier_vers_texte_recherche(question_brute, dossier)
+        elif NORMALISATION_ACTIVE:
+            question_pour_recherche = normaliser_question(_gemini_client, question_brute, model=GEMINI_MODEL)
+
+        vecteur_question = embed_question(_gemini_client, question_pour_recherche)
+
+        from rag import reranker_candidats
+        top_k_recherche = 12 if RERANKER_ACTIVE else 5
+        pivots = recherche_hybride(db, vecteur_question, question_pour_recherche, top_k=top_k_recherche)
+        if RERANKER_ACTIVE and pivots:
+            pivots = reranker_candidats(_gemini_client, question_brute, pivots, model=GEMINI_MODEL, top_k_final=5)
         if not pivots:
             print(f"[Fisca AI][RAG] Aucun article pertinent trouvé — durée={time.time()-debut:.1f}s.")
             return None
         linked = expand_via_refs(db, pivots)
+
+        if MULTI_HOP_ACTIVE:
+            from rag import rechercher_multi_hop
+            linked = linked + rechercher_multi_hop(_gemini_client, db, question_brute, pivots, linked, model=GEMINI_MODEL)
     except Exception as e:
         print(f"[Fisca AI][RAG] ÉCHEC RECHERCHE ({type(e).__name__}: {e}) — durée={time.time()-debut:.1f}s — bascule sur l'ancien chemin.")
         return None
@@ -857,6 +906,15 @@ def repondre(question_brute, historique=None, db=None):
             return resultat
 
     if MOTEUR_LOCAL_ACTIF:
+        # Point #35 du plan initial : le moteur enrichi (1096 articles,
+        # vocabulaire, themes) est tente en premier ; l'ancien moteur
+        # (cache_data.py, ~40 entrees ecrites a la main) ne sert plus que
+        # de tout dernier repli si le fichier de donnees enrichi n'a pas
+        # pu etre charge pour une raison quelconque.
+        from moteur_local_enrichi import repondre_locale_enrichie
+        resultat = repondre_locale_enrichie(question_brute)
+        if resultat is not None:
+            return resultat
         return repondre_locale(question_brute)
 
     print("[Fisca AI] Tous les moteurs disponibles ont echoue (moteur local suspendu) - message d'indisponibilite renvoye.")
