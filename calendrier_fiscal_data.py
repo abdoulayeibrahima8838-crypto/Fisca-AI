@@ -14,6 +14,22 @@ Deux catégories :
                               (pas une date de calendrier, mais un nombre de
                               jours/mois à partir d'un fait générateur)
 
+MISE À JOUR (correction) : 4 échéances corrigées suite à un audit croisé avec
+une extraction automatique du CGI 2026. Le CGI distingue "avant le [date]"
+(la date elle-même n'est PAS incluse, dernier jour valide = la veille) de
+"au plus tard le [date]" (la date EST incluse). Les entrées qui citaient
+"avant le 1er [mois]" comme jour/mois d'échéance avaient été mal converties :
+l'échéance réelle tombe le dernier jour du MOIS PRÉCÉDENT, pas au 1er du
+mois cité. Exemple concret : "avant le 1er septembre" -> échéance réelle
+le 31 août, pas le 1er septembre.
+  - vignette-vehicules : mois 4 -> 3 (l'art. 312 dit "avant le 1er avril")
+  - is-acompte-1        : mois 7 -> 6 (l'art. 67 dit "avant le 1er juillet")
+  - is-acompte-2        : mois 9 -> 8 (l'art. 67 dit "avant le 1er septembre")
+  - is-acompte-3        : mois 11 -> 10 (l'art. 67 dit "avant le 1er novembre")
+  - vignette-machines-sous : référence corrigée Art. 317 -> Art. 318 (le 317
+    ne donne que le montant de la vignette ; la date limite elle-même, "au
+    plus tard le 1er mars" - donc sans décalage -, est dans l'art. 318)
+
 MISE À JOUR : toute modification du CGI (loi de finances annuelle) doit se
 répercuter ici. Prévoir une revue de ce fichier chaque décembre/janvier.
 """
@@ -148,12 +164,12 @@ ECHEANCES_PONCTUELLES = [
         "mois": 3, "jour": 1,
         "libelle": "Vignette sur les machines à sous",
         "impot": "Vignette machines à sous",
-        "article": "Art. 317",
+        "article": "Art. 318",
         "public": "Exploitants de machines à sous",
     },
     {
         "id": "vignette-vehicules",
-        "mois": 4, "jour": 1,
+        "mois": 3, "jour": 31,
         "libelle": "Vignette véhicules — paiement total de l'exercice",
         "impot": "Vignette",
         "article": "Art. 312",
@@ -225,7 +241,7 @@ ECHEANCES_PONCTUELLES = [
     },
     {
         "id": "is-acompte-1",
-        "mois": 7, "jour": 1,
+        "mois": 6, "jour": 30,
         "libelle": "Impôt sur les Sociétés — 1er acompte provisionnel",
         "impot": "Impôt sur les Sociétés",
         "article": "Art. 67",
@@ -241,7 +257,7 @@ ECHEANCES_PONCTUELLES = [
     },
     {
         "id": "is-acompte-2",
-        "mois": 9, "jour": 1,
+        "mois": 8, "jour": 31,
         "libelle": "Impôt sur les Sociétés — 2e acompte provisionnel",
         "impot": "Impôt sur les Sociétés",
         "article": "Art. 67",
@@ -257,7 +273,7 @@ ECHEANCES_PONCTUELLES = [
     },
     {
         "id": "is-acompte-3",
-        "mois": 11, "jour": 1,
+        "mois": 10, "jour": 31,
         "libelle": "Impôt sur les Sociétés — 3e acompte provisionnel",
         "impot": "Impôt sur les Sociétés",
         "article": "Art. 67",
@@ -383,3 +399,4 @@ def get_calendrier_par_mois():
         calendrier[m]["echeances"].sort(key=lambda x: x["jour"])
 
     return calendrier
+
