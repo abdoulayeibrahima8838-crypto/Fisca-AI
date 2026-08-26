@@ -26,7 +26,7 @@
         ]
       },
       {
-        "section": "Procédure d’identification des marchandises et",
+        "section": "Procédure d’identification des marchandises et magasins",
         "articles": [
           "638",
           "639"
@@ -193,7 +193,7 @@
         ]
       },
       {
-        "section": "Hypothèque légale d",
+        "section": "Hypothèque légale du Trésor",
         "articles": [
           "762",
           "763",
@@ -237,12 +237,17 @@
       {
         "section": "Sanctions relatives",
         "articles": [
-          "814",
+          "814"
+        ]
+      },
+      {
+        "section": "Sanctions relatives aux retenues à la source",
+        "articles": [
           "815"
         ]
       },
       {
-        "section": "Sanctions relatives à",
+        "section": "Sanctions relatives à l’enregistrement et au timbre",
         "articles": [
           "816",
           "817"
@@ -321,7 +326,7 @@
     "nombre_articles": 12,
     "sections": [
       {
-        "section": "Conséquences des i",
+        "section": "Conséquences des irrégularités de la procédure",
         "articles": [
           "675"
         ]
@@ -408,7 +413,7 @@
         ]
       },
       {
-        "section": "Représentation des",
+        "section": "Représentation des contribuables",
         "articles": [
           "781",
           "782"
