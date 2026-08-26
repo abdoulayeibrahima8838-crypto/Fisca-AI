@@ -785,6 +785,7 @@ def repondre_rag(question_brute, db, historique=None):
     # --- Chemin standard (question ciblee, ou fiche non applicable/en echec) ---
     try:
         from rag import normaliser_question, construire_dossier_fiscal_virtuel, dossier_vers_texte_recherche
+        from vocabulaire import elargir_question
 
         question_pour_recherche = question_brute
         if DOSSIER_VIRTUEL_ACTIVE:
@@ -793,6 +794,14 @@ def repondre_rag(question_brute, db, historique=None):
             question_pour_recherche = dossier_vers_texte_recherche(question_brute, dossier)
         elif NORMALISATION_ACTIVE:
             question_pour_recherche = normaliser_question(_gemini_client, question_brute, model=GEMINI_MODEL)
+
+        # Correction importante : l'expansion du vocabulaire (sigles/synonymes,
+        # ex. "NIF P" -> "regime du forfait") etait appliquee UNIQUEMENT pour
+        # la recherche par mots-cles (a l'interieur de recherche_hybride),
+        # jamais pour le calcul du vecteur d'embedding - qui ne "voyait" donc
+        # que "NIF P" seul, un sigle sans aucun sens semantique pour le
+        # modele d'embedding. Corrige en elargissant AUSSI avant l'embedding.
+        question_pour_recherche = elargir_question(question_pour_recherche)
 
         vecteur_question = embed_question(_gemini_client, question_pour_recherche)
 
