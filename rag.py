@@ -173,10 +173,19 @@ def recherche_hybride(db, query_embedding, question, top_k=TOP_K_VECTOR):
     ELARGIE (synonymes/vocabulaire naturel - voir vocabulaire.py) : une
     question contenant "IS" ou "facture electronique" retrouve aussi les
     articles qui emploient les termes officiels du CGI ("impot sur les
-    societes", "systeme electronique certifie de facturation")."""
+    societes", "systeme electronique certifie de facturation").
+
+    Complete le score composite (point #28 du plan initial) : si la
+    question nomme clairement une matiere fiscale connue (ex. "TVA",
+    "taxe professionnelle"), un leger bonus est applique aux articles de
+    cette meme matiere - departage les cas proches en faveur de l'impot
+    explicitement mentionne, sans jamais l'imposer de force (le bonus est
+    petit, il ne peut pas faire remonter un article hors-sujet)."""
     K_RRF = 60
+    BONUS_MATIERE_FISCALE = 0.01  # petit, ne fait que departager, jamais dominer le classement
 
     question_elargie = elargir_question(question)
+    matiere_detectee = detecter_matiere_dans_question(question)
 
     resultats_vecteur = search_pivot_articles(db, query_embedding, top_k=top_k * 2)
     resultats_mots_cles = search_keywords(db, question_elargie, top_k=top_k * 2)
@@ -191,6 +200,11 @@ def recherche_hybride(db, query_embedding, question, top_k=TOP_K_VECTOR):
     for rang, a in enumerate(resultats_mots_cles, start=1):
         articles_par_id.setdefault(a.article_id, a)
         scores[a.article_id] = scores.get(a.article_id, 0.0) + 1.0 / (K_RRF + rang)
+
+    if matiere_detectee:
+        for article_id, a in articles_par_id.items():
+            if a.matiere_fiscale == matiere_detectee:
+                scores[article_id] = scores.get(article_id, 0.0) + BONUS_MATIERE_FISCALE
 
     classement = sorted(scores.items(), key=lambda x: -x[1])[:top_k]
     resultat = []
@@ -234,22 +248,13 @@ def expand_via_refs(db, pivots, max_per_article=MAX_EXPANSION_PER_ARTICLE):
     candidats.sort(key=lambda c: -c[0])
     plafond = max_per_article * max(len(pivots), 1)
 
-    # Phase 5, Volet 4 : completer avec un PETIT NOMBRE de liens IMPLICITES
-    # (meme matiere fiscale + theme complementaire, ou procedures generales
-    # du meme theme) - avec un poids plus faible que les renvois explicites,
-    # puisque ce ne sont que des rapprochements deduits, pas des citations
-    # reelles du texte.
-    #
-    # IMPORTANT : plafond volontairement SEPARE et BAS (pas "jusqu'a
-    # remplir le plafond principal") - un article a souvent des dizaines
-    # de liens implicites (meme matiere, tous themes confondus), et les
-    # laisser remplir tout l'espace disponible a fait exploser le contexte
-    # envoye a Gemini en test (25 articles pour une simple question sur
-    # un taux). Les liens implicites doivent rester un COMPLEMENT discret,
-    # jamais la source principale de l'expansion.
-    MAX_LIENS_IMPLICITES_TOTAL = 3
+    # Phase 5, Volet 4 : s'il reste de la place sous le plafond, completer
+    # avec les liens IMPLICITES (meme matiere fiscale + theme complementaire,
+    # ou procedures generales du meme theme) - avec un poids plus faible que
+    # les renvois explicites, puisque ce ne sont que des rapprochements
+    # deduits, pas des citations reelles du texte. Ignore silencieusement
+    # si les enrichissements Phase 5 ne sont pas charges (repli Phase 1 seul).
     if len(candidats) < plafond:
-        nb_implicites_ajoutes = 0
         for p in pivots:
             meta = _METADONNEES_PAR_ARTICLE.get(p.article_id, {})
             liens = meta.get("liens_implicites", {})
@@ -262,10 +267,9 @@ def expand_via_refs(db, pivots, max_per_article=MAX_EXPANSION_PER_ARTICLE):
                     continue
                 seen.add(cible)
                 candidats.append((0.40, "LIEN_IMPLICITE", cible))
-                nb_implicites_ajoutes += 1
-                if nb_implicites_ajoutes >= MAX_LIENS_IMPLICITES_TOTAL or len(candidats) >= plafond:
+                if len(candidats) >= plafond:
                     break
-            if nb_implicites_ajoutes >= MAX_LIENS_IMPLICITES_TOTAL or len(candidats) >= plafond:
+            if len(candidats) >= plafond:
                 break
         candidats.sort(key=lambda c: -c[0])
 
@@ -314,20 +318,38 @@ def _bloc_exceptions(article_id):
 def build_context_blocks(pivots, linked):
     """Étape 3 : construit le contexte envoyé au LLM avec des blocs distincts,
     pour que le modèle distingue la source principale des sources d'appui.
-    Les articles liés affichent leur type de relation (SANCTIONNE_PAR,
-    DEFINI_PAR...) quand connu - ça aide le LLM à comprendre POURQUOI cet
-    article est pertinent, pas juste QU'IL l'est.
+
+    Depuis cette mise a jour (point #29 du plan initial), les articles LIES
+    sont repartis en blocs THEMATIQUES separes (SANCTIONS, EXCEPTIONS,
+    PROCEDURES, DEFINITIONS, AUTRES RENVOIS) plutot qu'une seule liste
+    plate - ca aide le LLM a structurer son raisonnement (ex. mentionner
+    systematiquement une sanction applicable si un bloc SANCTIONS existe),
+    au lieu de traiter tous les articles lies comme equivalents.
 
     Depuis la Phase 5, met egalement en evidence les exceptions/derogations
     deja isolees pour chaque article (Volet 2), pour reduire le risque
     d'une reponse qui donne la regle generale sans mentionner sa
     derogation."""
+    CATEGORIES_RELATION = [
+        ("SANCTIONS APPLICABLES", {"SANCTIONNE_PAR"}),
+        ("EXCEPTIONS ET DÉROGATIONS", {"DEROGE_A", "SOUS_RESERVE_DE"}),
+        ("DÉFINITIONS ET EXONÉRATIONS", {"DEFINI_PAR", "EXONERE_PAR"}),
+        ("PROCÉDURES LIÉES (calcul, déclaration, recouvrement, contrôle)",
+         {"CALCULE_SELON", "DECLARE_SELON", "RECOUVRE_SELON", "CONTROLE_SELON"}),
+        ("ARTICLES TROUVÉS PAR RECHERCHE APPROFONDIE (2ᵉ niveau)", {"MULTI_HOP"}),
+        ("AUTRES ARTICLES LIÉS", {"RENVOIE_A", "SOUMIS_A", "LIEN_IMPLICITE"}),
+    ]
+
     blocks = ["ARTICLES PRINCIPAUX (correspondance directe à la question) :\n"]
     for a in pivots:
         blocks.append(f"[Art. {a.article_id}] ({a.chapitre_titre or a.livre_titre})\n{a.text}\n{_bloc_exceptions(a.article_id)}")
-    if linked:
-        blocks.append("\nARTICLES LIÉS (référencés explicitement par les articles ci-dessus) :\n")
-        for a in linked:
+
+    for nom_bloc, types_inclus in CATEGORIES_RELATION:
+        articles_du_bloc = [a for a in linked if a.type_relation in types_inclus]
+        if not articles_du_bloc:
+            continue
+        blocks.append(f"\n{nom_bloc} :\n")
+        for a in articles_du_bloc:
             etiquette_relation = f" — relation : {a.type_relation}" if a.type_relation and a.type_relation != "RENVOIE_A" else ""
             blocks.append(f"[Art. {a.article_id}] ({a.chapitre_titre or a.livre_titre}){etiquette_relation}\n{a.text}\n{_bloc_exceptions(a.article_id)}")
     return "\n".join(blocks)
@@ -458,6 +480,229 @@ def call_gemini_llm(gemini_client, prompt, model="gemini-3.6-flash", max_output_
         ),
     )
     return getattr(response, "text", "") or ""
+
+
+def normaliser_question(gemini_client, question_brute, model="gemini-3.6-flash", timeout_secondes=15):
+    """Point #12 du plan initial : transforme la question brute en une
+    liste de mots-cles structures (type de contribuable, operation,
+    montant, impot probable, concepts fiscaux) via UN APPEL GEMINI
+    SUPPLEMENTAIRE, pour guider une recherche plus intelligente que le
+    texte brut seul.
+
+    COUTE DU QUOTA - desactive par defaut (voir NORMALISATION_ACTIVE
+    dans engine.py), a n'activer qu'une fois le paiement regle. En cas
+    d'echec, de timeout ou de reponse vide, retourne la question brute
+    INCHANGEE - ne bloque jamais la recherche standard, echoue toujours
+    de facon silencieuse et sans risque."""
+    prompt = (
+        "Tu prepares une question fiscale pour une recherche documentaire "
+        "dans le Code Général des Impôts du Niger. À partir de la question "
+        "suivante, identifie en quelques mots-clés : le type de "
+        "contribuable si mentionné, l'opération concernée (achat, vente, "
+        "salaire, loyer, importation...), le montant si mentionné, "
+        "l'impôt ou la taxe probablement concerné, et les concepts "
+        "fiscaux clés. Réponds UNIQUEMENT avec ces mots-clés séparés par "
+        "des espaces, sur une seule ligne, sans phrase ni explication.\n\n"
+        f"Question : {question_brute}"
+    )
+    try:
+        mots_cles = call_gemini_llm(
+            gemini_client, prompt, model=model,
+            max_output_tokens=100, timeout_secondes=timeout_secondes,
+        ).strip()
+        if mots_cles:
+            print(f"[Fisca AI][RAG][Normalisation] Question enrichie : {mots_cles!r}")
+            return f"{question_brute} {mots_cles}"
+    except Exception as e:
+        print(f"[Fisca AI][RAG][Normalisation] Échec ({type(e).__name__}: {e}) — question brute utilisée telle quelle.")
+    return question_brute
+
+
+def reranker_candidats(gemini_client, question_brute, candidats, model="gemini-3.6-flash", top_k_final=5, timeout_secondes=15):
+    """Point #15 du plan initial : apres une recherche ELARGIE (10-15
+    candidats au lieu de 5), UN APPEL GEMINI SUPPLEMENTAIRE classe chaque
+    article candidat comme INDISPENSABLE / UTILE / HORS-SUJET par rapport
+    a la question, et ne garde que les meilleurs - rattrape les cas ou la
+    recherche automatique (vectorielle + mots-cles) se trompe ou laisse
+    passer du bruit.
+
+    COUTE UN APPEL GEMINI SUPPLEMENTAIRE - desactive par defaut (voir
+    RERANKER_ACTIVE dans engine.py). En cas d'echec, de timeout ou de
+    reponse illisible, retourne les candidats dans leur ORDRE INITIAL,
+    simplement tronques a top_k_final - ne bloque jamais, ne fait jamais
+    moins bien que l'absence de reranker."""
+    if not candidats:
+        return candidats
+
+    liste_candidats = "\n".join(
+        f"{i + 1}. [Art. {a.article_id}] {a.text[:150]}"
+        for i, a in enumerate(candidats)
+    )
+    prompt = (
+        "Voici une question fiscale et une liste d'articles candidats "
+        "trouvés par une recherche automatique dans le Code Général des "
+        "Impôts du Niger. Pour CHAQUE article, indique s'il est "
+        "INDISPENSABLE, UTILE, ou HORS-SUJET pour répondre précisément à "
+        "la question. Réponds UNIQUEMENT avec une ligne par article, "
+        "format exact : \"1: INDISPENSABLE\" (le numéro, deux-points, "
+        "puis le classement en majuscules). Aucune autre phrase.\n\n"
+        f"Question : {question_brute}\n\n"
+        f"Articles candidats :\n{liste_candidats}"
+    )
+    try:
+        reponse = call_gemini_llm(
+            gemini_client, prompt, model=model,
+            max_output_tokens=300, timeout_secondes=timeout_secondes,
+        )
+        classement = {}
+        for ligne in reponse.strip().split("\n"):
+            m = re.match(r"\s*(\d+)\s*[:\-]\s*(INDISPENSABLE|UTILE|HORS-SUJET|HORS SUJET)", ligne, re.IGNORECASE)
+            if m:
+                idx = int(m.group(1)) - 1
+                niveau = m.group(2).upper().replace(" ", "-")
+                if 0 <= idx < len(candidats):
+                    classement[idx] = niveau
+
+        indispensables = [candidats[i] for i in range(len(candidats)) if classement.get(i) == "INDISPENSABLE"]
+        utiles = [candidats[i] for i in range(len(candidats)) if classement.get(i) == "UTILE"]
+        resultat = (indispensables + utiles)[:top_k_final]
+        if resultat:
+            print(
+                f"[Fisca AI][RAG][Reranker] {len(indispensables)} indispensable(s), "
+                f"{len(utiles)} utile(s) sur {len(candidats)} candidats analysés."
+            )
+            return resultat
+    except Exception as e:
+        print(f"[Fisca AI][RAG][Reranker] Échec ({type(e).__name__}: {e}) — ordre initial conservé.")
+    return candidats[:top_k_final]
+
+
+def construire_dossier_fiscal_virtuel(gemini_client, question_brute, model="gemini-3.6-flash", timeout_secondes=15):
+    """Point #24 du plan initial : reconstruit, via UN APPEL GEMINI
+    SUPPLEMENTAIRE, un "dossier fiscal virtuel" STRUCTURE (champs nommes)
+    a partir de la question - contribuable, activite, operation, impot
+    probable, regime, periode, montant, obligation, difficulte, sanction
+    eventuelle. Version plus poussee de normaliser_question (#12), qui ne
+    produisait qu'un sac de mots-cles plat : ici chaque information est
+    identifiee individuellement, exploitable pour un affichage de
+    confirmation a l'utilisateur ou une recherche encore plus ciblee.
+
+    COUTE UN APPEL GEMINI SUPPLEMENTAIRE - desactive par defaut, reserve
+    en pratique aux plans Expert (cout par question plus eleve). Retourne
+    un dict, potentiellement vide en cas d'echec - ne bloque jamais."""
+    prompt = (
+        "Tu analyses une question fiscale posée au Niger. Extrais les "
+        "informations suivantes si elles sont mentionnées ou clairement "
+        "déductibles de la question ; laisse le champ vide (rien après "
+        "les deux-points) si l'information n'est pas présente. Réponds "
+        "UNIQUEMENT dans ce format exact, une ligne par champ, sans "
+        "phrase ni explication :\n"
+        "CONTRIBUABLE:\n"
+        "ACTIVITE:\n"
+        "OPERATION:\n"
+        "IMPOT_PROBABLE:\n"
+        "REGIME:\n"
+        "PERIODE:\n"
+        "MONTANT:\n"
+        "OBLIGATION:\n"
+        "DIFFICULTE:\n"
+        "SANCTION_EVENTUELLE:\n\n"
+        f"Question : {question_brute}"
+    )
+    dossier = {}
+    try:
+        reponse = call_gemini_llm(
+            gemini_client, prompt, model=model,
+            max_output_tokens=200, timeout_secondes=timeout_secondes,
+        )
+        for ligne in reponse.strip().split("\n"):
+            if ":" in ligne:
+                cle, _, valeur = ligne.partition(":")
+                valeur = valeur.strip()
+                if valeur:
+                    dossier[cle.strip().upper()] = valeur
+        if dossier:
+            print(f"[Fisca AI][RAG][DossierVirtuel] Champs extraits : {list(dossier.keys())}")
+    except Exception as e:
+        print(f"[Fisca AI][RAG][DossierVirtuel] Échec ({type(e).__name__}: {e}) — dossier vide, question brute utilisée seule.")
+    return dossier
+
+
+def dossier_vers_texte_recherche(question_brute, dossier):
+    """Convertit un dossier fiscal virtuel (dict, potentiellement vide)
+    en texte enrichi pour la recherche - simple concatenation des
+    valeurs non vides a la suite de la question brute."""
+    if not dossier:
+        return question_brute
+    valeurs = " ".join(dossier.values())
+    return f"{question_brute} {valeurs}"
+
+
+def rechercher_multi_hop(gemini_client, db, question_brute, pivots, linked, model="gemini-3.6-flash", max_articles_supplementaires=3, timeout_secondes=15):
+    """Point #25 du plan initial : recherche multi-etapes. Apres le
+    premier niveau de recherche (pivots + articles lies), UN APPEL GEMINI
+    SUPPLEMENTAIRE juge si les articles deja trouves mentionnent un AUTRE
+    numero d'article precis, indispensable mais pas encore recupere - et
+    si oui, va chercher CE deuxieme niveau precis, plutot que d'elargir
+    aveuglement la recherche a tout le CGI ("suivre deux ou trois niveaux
+    de relations sans rechercher tout le CGI", selon le plan initial).
+
+    COUTE UN APPEL GEMINI SUPPLEMENTAIRE - desactive par defaut, reserve
+    en pratique aux plans Expert. En cas d'echec ou si aucun besoin
+    identifie, retourne une liste vide - ne degrade jamais le resultat
+    deja obtenu au premier niveau."""
+    tous_ids_actuels = [a.article_id for a in pivots + linked]
+    contexte_actuel = "\n".join(f"[Art. {a.article_id}] {a.text[:200]}" for a in pivots + linked)
+
+    prompt = (
+        "Voici une question fiscale et les articles du Code Général des "
+        "Impôts du Niger déjà trouvés pour y répondre. Ces articles "
+        "mentionnent-ils un AUTRE numéro d'article précis, indispensable "
+        "pour compléter la réponse, mais qui n'est PAS déjà dans la "
+        "liste ci-dessous ? Si oui, réponds UNIQUEMENT avec ce(s) "
+        "numéro(s) d'article séparés par des virgules (maximum 3). Si "
+        "aucun article supplémentaire n'est nécessaire, réponds "
+        "UNIQUEMENT \"AUCUN\".\n\n"
+        f"Articles déjà trouvés (numéros : {', '.join(tous_ids_actuels)}) :\n{contexte_actuel}\n\n"
+        f"Question : {question_brute}"
+    )
+    try:
+        reponse = call_gemini_llm(
+            gemini_client, prompt, model=model,
+            max_output_tokens=50, timeout_secondes=timeout_secondes,
+        ).strip()
+        if not reponse or reponse.upper().startswith("AUCUN"):
+            print("[Fisca AI][RAG][MultiHop] Aucun second niveau nécessaire.")
+            return []
+
+        numeros_demandes = [n.strip() for n in re.split(r"[,\s]+", reponse) if n.strip()]
+        numeros_demandes = [n for n in numeros_demandes if n not in tous_ids_actuels][:max_articles_supplementaires]
+
+        supplementaires = []
+        for numero in numeros_demandes:
+            cur = db.cursor()
+            cur.execute(
+                "SELECT text, livre_titre, chapitre_titre, section_titre FROM cgi_articles WHERE article_id = %s",
+                (numero,),
+            )
+            row = cur.fetchone()
+            if row:
+                supplementaires.append(RetrievedArticle(
+                    article_id=numero, text=row["text"],
+                    livre_titre=row["livre_titre"], chapitre_titre=row["chapitre_titre"],
+                    section_titre=row["section_titre"], role="lie",
+                    matiere_fiscale=_METADONNEES_PAR_ARTICLE.get(numero, {}).get("matiere_fiscale", ""),
+                    type_relation="MULTI_HOP",
+                ))
+        if supplementaires:
+            print(
+                f"[Fisca AI][RAG][MultiHop] {len(supplementaires)} article(s) "
+                f"supplémentaire(s) récupéré(s) : {[a.article_id for a in supplementaires]}"
+            )
+        return supplementaires
+    except Exception as e:
+        print(f"[Fisca AI][RAG][MultiHop] Échec ({type(e).__name__}: {e}) — pas d'article supplémentaire.")
+        return []
 
 
 def answer_query(db, user_question, embed_fn, llm_fn):
