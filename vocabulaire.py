@@ -159,6 +159,21 @@ def elargir_question(question):
             if re.search(motif, question_lower):
                 termes_trouves.add(terme_central)
 
+    # Correction importante : "NIF R/S/P/A/C" declenchent TOUJOURS aussi le
+    # sigle generique "NIF" seul (puisque "NIF" apparait litteralement dans
+    # le texte de "NIF P"), ajoutant a tort "numero d'identification
+    # fiscale" en plus du terme specifique. Resultat observe en production :
+    # l'article 775 (qui DEFINIT le NIF generique) dominait systematiquement
+    # la recherche, empechant l'article specifique au bon regime (ex. 120
+    # pour le regime du forfait) de remonter. Le terme specifique, plus
+    # informatif, doit toujours l'emporter seul.
+    TERMES_REGIMES_NIF_SPECIFIQUES = {
+        "régime réel normal d'imposition", "régime réel simplifié d'imposition",
+        "régime du forfait", "régimes particuliers d'imposition",
+    }
+    if termes_trouves & TERMES_REGIMES_NIF_SPECIFIQUES:
+        termes_trouves.discard("numéro d'identification fiscale")
+
     if not termes_trouves:
         return question
 
