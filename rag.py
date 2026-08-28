@@ -83,11 +83,28 @@ _FICHES_PAR_MATIERE = (
     {f["matiere_fiscale"]: f for f in _fiches_par_impot} if _fiches_par_impot else {}
 )
 
+# Espace Procedures (session dediee entreprises) : fiches par PROCEDURE
+# (contrôle, sanctions, recouvrement...) et fiches par ACTE (une vraie
+# action entreprise - "creer mon entreprise", "faire face a un controle").
+# Meme principe que les fiches par impot : utilisees pour les questions
+# LARGES, jamais pour les questions ciblees habituelles.
+_fiches_procedures = _charger_json_optionnel("cgi2026_fiches_procedures.json")
+_FICHES_PAR_PROCEDURE = (
+    {f["matiere_fiscale"]: f for f in _fiches_procedures} if _fiches_procedures else {}
+)
+
+_fiches_par_acte = _charger_json_optionnel("cgi2026_fiches_par_acte.json")
+_FICHES_PAR_ACTE = (
+    {f["acte"]: f for f in _fiches_par_acte} if _fiches_par_acte else {}
+)
+
 print(
     f"[Fisca AI][RAG] Enrichissements chargés : "
     f"{len(_METADONNEES_PAR_ARTICLE)} article(s) — source : {_SOURCE_METADONNEES}, "
     f"{len(_POIDS_RELATIONS)} relation(s) qualifiées Phase 2, "
-    f"{len(_FICHES_PAR_MATIERE)} fiche(s) par impôt (Phase 5)."
+    f"{len(_FICHES_PAR_MATIERE)} fiche(s) par impôt, "
+    f"{len(_FICHES_PAR_PROCEDURE)} fiche(s) par procédure, "
+    f"{len(_FICHES_PAR_ACTE)} fiche(s) par acte (Espace Procédures)."
 )
 
 
@@ -402,6 +419,80 @@ MOTS_QUESTION_LARGE = [
 MAX_ARTICLES_TEXTE_PAR_THEME = 1  # nb d'articles au texte complet recupere par theme
 
 
+# ---------------------------------------------------------------------------
+# Espace Procedures : declencheurs par mots-cles pour les fiches par ACTE
+# et par PROCEDURE. Meme prudence que vocabulaire.py : des expressions
+# suffisamment longues/specifiques pour eviter les faux positifs (jamais
+# un seul mot court et ambigu).
+# ---------------------------------------------------------------------------
+DECLENCHEURS_ACTES = {
+    "Créer son entreprise": [
+        "créer mon entreprise", "créer une entreprise", "démarrer une activité",
+        "nouvelle entreprise", "immatriculation fiscale", "immatriculer mon entreprise",
+    ],
+    "Gérer ses obligations courantes": [
+        "mes obligations fiscales", "que dois-je déclarer", "obligations déclaratives",
+    ],
+    "Modifier son identification": [
+        "changer d'adresse", "modifier mon régime", "changement d'activité",
+        "changement de régime",
+    ],
+    "Rester en règle (ARF, régularisation, suspension, radiation)": [
+        "attestation de régularité fiscale", "me régulariser", "régulariser ma situation",
+        "radiation de mon entreprise", "suspension de mon activité",
+    ],
+    "Faire face à un contrôle fiscal": [
+        "avis de contrôle", "je suis contrôlé", "vérification fiscale",
+        "contrôle fiscal", "examen de ma situation fiscale",
+    ],
+    "Se protéger et anticiper": [
+        "rescrit fiscal", "mes garanties en tant que contribuable", "doctrine fiscale",
+    ],
+    "Alléger sa charge fiscale légalement": [
+        "réduire mes impôts légalement", "exonération fiscale", "déduction fiscale",
+        "abattement fiscal",
+    ],
+    "Faire face aux conséquences (sanctions, recouvrement, contentieux)": [
+        "quelles sanctions", "je conteste mon imposition", "réclamation fiscale",
+        "avis de mise en recouvrement",
+    ],
+}
+
+DECLENCHEURS_PROCEDURES = {
+    "Procédures - Contrôle": ["contrôle fiscal", "vérification de comptabilité", "droit de visite"],
+    "Procédures - Recouvrement": ["recouvrement de l'impôt", "poursuites fiscales", "saisie fiscale"],
+    "Procédures - Sanctions": ["sanctions fiscales", "pénalités fiscales", "amendes fiscales"],
+    "Procédures - Contentieux": ["contentieux fiscal", "réclamation fiscale"],
+    "Procédures - Garanties du contribuable": ["garanties du contribuable", "rescrit fiscal", "doctrine fiscale"],
+    "Procédures - Obligations déclaratives": ["obligations déclaratives"],
+    "Procédures - Identification": ["numéro d'identification fiscale", "immatriculation fiscale"],
+    "Procédures - Rectification": ["rectification contradictoire", "taxation d'office"],
+    "Régimes spéciaux et incitations fiscales": [
+        "régime fiscal minier", "régime fiscal pétrolier", "incitations fiscales",
+        "régime fiscal des investissements",
+    ],
+}
+
+
+def _detecter_par_declencheurs(question, declencheurs_par_cle):
+    """Fonction generique : retourne la premiere cle dont au moins une
+    expression declenchante apparait dans la question (insensible a la
+    casse) - reutilisee pour les actes et les procedures."""
+    question_lower = question.lower()
+    for cle, expressions in declencheurs_par_cle.items():
+        if any(expr in question_lower for expr in expressions):
+            return cle
+    return None
+
+
+def detecter_acte_dans_question(question):
+    return _detecter_par_declencheurs(question, DECLENCHEURS_ACTES)
+
+
+def detecter_procedure_dans_question(question):
+    return _detecter_par_declencheurs(question, DECLENCHEURS_PROCEDURES)
+
+
 def detecter_matiere_dans_question(question):
     """Cherche si le nom d'une matière fiscale connue (Phase 1/5) apparaît
     dans la question - condition necessaire (mais pas suffisante seule)
@@ -457,6 +548,72 @@ def construire_contexte_fiche(matiere_fiscale, db, max_articles_par_theme=MAX_AR
             f"\nProcédures générales associées (sanctions, recouvrement) : "
             f"{', '.join(fiche['procedures_generales_associees'])}"
         )
+
+    return "\n".join(blocs), ids_avec_texte
+
+
+def construire_contexte_procedure(nom_procedure, db, max_articles_par_section=MAX_ARTICLES_TEXTE_PAR_THEME):
+    """Equivalent de construire_contexte_fiche, mais pour les fiches par
+    PROCEDURE (Espace Procedures, Groupe A + regimes speciaux). Structure
+    legerement differente (cle "section" au lieu de "theme"), meme principe
+    de plafond strict - jamais envoyer les 69 articles de "Recouvrement"
+    d'un coup."""
+    fiche = _FICHES_PAR_PROCEDURE.get(nom_procedure)
+    if not fiche:
+        return None
+
+    blocs = [f"VUE D'ENSEMBLE — {nom_procedure} ({fiche['nombre_articles']} articles au total, question large détectée) :\n"]
+    ids_avec_texte = []
+
+    for section in fiche["sections"]:
+        nom_section = section["section"]
+        ids = section["articles"]
+        a_recuperer = ids[:max_articles_par_section]
+        reste = ids[max_articles_par_section:]
+
+        blocs.append(f"\n--- {nom_section} ---")
+        for aid in a_recuperer:
+            cur = db.cursor()
+            cur.execute("SELECT text FROM cgi_articles WHERE article_id = %s", (aid,))
+            row = cur.fetchone()
+            if row:
+                blocs.append(f"[Art. {aid}]\n{row['text']}")
+                ids_avec_texte.append(aid)
+        if reste:
+            blocs.append(f"(Autres articles de cette section, non détaillés ici : {', '.join(reste)})")
+
+    return "\n".join(blocs), ids_avec_texte
+
+
+def construire_contexte_acte(nom_acte, db, max_articles_texte=3):
+    """Equivalent de construire_contexte_fiche, mais pour les fiches par
+    ACTE (parcours entreprise - "creer son entreprise", "faire face a un
+    controle"...). Structure PLATE (une seule liste d'articles, pas de
+    sous-sections) puisqu'un acte croise volontairement plusieurs sources -
+    plafond global plus generereux (3 au lieu d'1) car ces fiches melangent
+    des sujets varies, un seul article-exemple par acte serait trop pauvre."""
+    fiche = _FICHES_PAR_ACTE.get(nom_acte)
+    if not fiche:
+        return None
+
+    ids = fiche["articles"]
+    a_recuperer = ids[:max_articles_texte]
+    reste = ids[max_articles_texte:]
+
+    blocs = [
+        f"VUE D'ENSEMBLE — Acte : {nom_acte} ({fiche['nombre_articles_total']} articles au total, "
+        f"question large détectée) :\n{fiche['description']}\n"
+    ]
+    ids_avec_texte = []
+    for aid in a_recuperer:
+        cur = db.cursor()
+        cur.execute("SELECT text FROM cgi_articles WHERE article_id = %s", (aid,))
+        row = cur.fetchone()
+        if row:
+            blocs.append(f"[Art. {aid}]\n{row['text']}")
+            ids_avec_texte.append(aid)
+    if reste:
+        blocs.append(f"\n(Autres articles pertinents pour cet acte, non détaillés ici : {', '.join(reste)})")
 
     return "\n".join(blocs), ids_avec_texte
 
