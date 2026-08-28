@@ -585,35 +585,49 @@ def construire_contexte_procedure(nom_procedure, db, max_articles_par_section=MA
     return "\n".join(blocs), ids_avec_texte
 
 
-def construire_contexte_acte(nom_acte, db, max_articles_texte=3):
+def construire_contexte_acte(nom_acte, db, max_articles_par_source=1):
     """Equivalent de construire_contexte_fiche, mais pour les fiches par
     ACTE (parcours entreprise - "creer son entreprise", "faire face a un
-    controle"...). Structure PLATE (une seule liste d'articles, pas de
-    sous-sections) puisqu'un acte croise volontairement plusieurs sources -
-    plafond global plus generereux (3 au lieu d'1) car ces fiches melangent
-    des sujets varies, un seul article-exemple par acte serait trop pauvre."""
+    controle"...). Un acte croise volontairement PLUSIEURS SOURCES (ex.
+    identification + choix du regime pour "creer son entreprise") - le
+    plafond est donc applique PAR SOURCE, pas sur la liste fusionnee.
+
+    Bug corrige : la version precedente plafonnait sur la liste fusionnee
+    et triee, ce qui faisait systematiquement disparaitre certaines
+    sources entieres (l'identification n'apparaissait jamais pour "Creer
+    son entreprise", uniquement les regimes, qui triaient toujours en
+    premier par pur hasard numerique) - contraire au but meme de ces
+    fiches, qui est justement de montrer plusieurs sources ensemble."""
     fiche = _FICHES_PAR_ACTE.get(nom_acte)
     if not fiche:
         return None
-
-    ids = fiche["articles"]
-    a_recuperer = ids[:max_articles_texte]
-    reste = ids[max_articles_texte:]
 
     blocs = [
         f"VUE D'ENSEMBLE — Acte : {nom_acte} ({fiche['nombre_articles_total']} articles au total, "
         f"question large détectée) :\n{fiche['description']}\n"
     ]
     ids_avec_texte = []
-    for aid in a_recuperer:
-        cur = db.cursor()
-        cur.execute("SELECT text FROM cgi_articles WHERE article_id = %s", (aid,))
-        row = cur.fetchone()
-        if row:
-            blocs.append(f"[Art. {aid}]\n{row['text']}")
-            ids_avec_texte.append(aid)
-    if reste:
-        blocs.append(f"\n(Autres articles pertinents pour cet acte, non détaillés ici : {', '.join(reste)})")
+
+    for source in fiche["sources"]:
+        ids_source = source.get("articles", [])
+        if not ids_source:
+            continue
+        libelle_source = source.get("libelle") or source["section"] or source["matiere_ou_categorie"]
+        a_recuperer = ids_source[:max_articles_par_source]
+        reste = [i for i in ids_source[max_articles_par_source:] if i not in ids_avec_texte]
+
+        blocs.append(f"\n--- {libelle_source} ---")
+        for aid in a_recuperer:
+            if aid in ids_avec_texte:
+                continue
+            cur = db.cursor()
+            cur.execute("SELECT text FROM cgi_articles WHERE article_id = %s", (aid,))
+            row = cur.fetchone()
+            if row:
+                blocs.append(f"[Art. {aid}]\n{row['text']}")
+                ids_avec_texte.append(aid)
+        if reste:
+            blocs.append(f"(Autres articles de cette source, non détaillés ici : {', '.join(reste)})")
 
     return "\n".join(blocs), ids_avec_texte
 
