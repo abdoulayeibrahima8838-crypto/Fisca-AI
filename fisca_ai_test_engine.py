@@ -49,6 +49,7 @@ from google import genai
 from rag import (
     embed_question, recherche_hybride,
     detecter_acte_dans_question, detecter_procedure_dans_question,
+    detecter_matiere_dans_question, est_question_large,
 )
 from vocabulaire import elargir_question
 
@@ -140,8 +141,9 @@ def executer_test_hors_perimetre(test, client, conn):
         "critical": test.get("critical", False), "erreurs": [],
     }
     try:
-        vecteur = embed_question_avec_retry(client, test["question"])
-        pivots = recherche_hybride(conn, vecteur, test["question"], top_k=5)
+        question_elargie_pour_embedding = elargir_question(test["question"])  # meme pipeline que engine.py : elargir AVANT embedding
+        vecteur = embed_question_avec_retry(client, question_elargie_pour_embedding)
+        pivots = recherche_hybride(conn, vecteur, question_elargie_pour_embedding, top_k=5)
         meilleur_score = max((a.score for a in pivots), default=0.0)
         resultat["meilleur_score"] = round(meilleur_score, 4)
 
@@ -175,8 +177,9 @@ def executer_test_recherche(test, client, conn):
         "erreurs": [],
     }
     try:
-        vecteur = embed_question_avec_retry(client, test["question"])
-        pivots = recherche_hybride(conn, vecteur, test["question"], top_k=10)
+        question_elargie_pour_embedding = elargir_question(test["question"])  # meme pipeline que engine.py : elargir AVANT embedding
+        vecteur = embed_question_avec_retry(client, question_elargie_pour_embedding)
+        pivots = recherche_hybride(conn, vecteur, question_elargie_pour_embedding, top_k=10)
         ids_trouves = [a.article_id for a in pivots]
         textes_trouves = [a.text for a in pivots]
         attendus = set(test["articles_attendus"])
@@ -241,11 +244,18 @@ def executer_test_vocabulaire(test):
 
 
 def executer_test_routage(test):
+    """Verifie qu'AU MOINS UN des 3 chemins de routage (acte, procedure,
+    ou fiche par impot) se declenche - le bug initial ne verifiait que
+    acte/procedure, jamais la fiche par impot (matiere fiscale), ce qui
+    faisait a tort echouer des questions comme "Explique-moi toute la
+    taxe professionnelle" qui passent par ce 3eme chemin."""
     resultat = {"id": test["id"], "categorie": test["categorie"], "critical": test.get("critical", False), "erreurs": []}
     acte = detecter_acte_dans_question(test["question"])
     procedure = detecter_procedure_dans_question(test["question"])
-    ok = bool(acte or procedure)
+    matiere = detecter_matiere_dans_question(test["question"]) if est_question_large(test["question"]) else None
+    ok = bool(acte or procedure or matiere)
     resultat["statut"] = "PASS" if ok else "FAIL"
+    resultat["chemin_detecte"] = f"acte={acte}" if acte else (f"procédure={procedure}" if procedure else (f"fiche={matiere}" if matiere else "aucun"))
     if not ok:
         resultat["erreurs"].append(ROUTING_ERROR)
     for cle in ("recall_1", "recall_3", "recall_5", "recall_10"):
