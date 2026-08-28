@@ -737,9 +737,93 @@ def repondre_rag(question_brute, db, historique=None):
         embed_question, recherche_hybride, expand_via_refs,
         build_context_blocks, check_no_hallucinated_articles, call_gemini_llm,
         est_question_large, detecter_matiere_dans_question, construire_contexte_fiche,
+        detecter_acte_dans_question, construire_contexte_acte,
+        detecter_procedure_dans_question, construire_contexte_procedure,
     )
 
     debut = time.time()
+
+    # --- Tentative "acte" (Espace Procédures - le plus specifique/actionnable,
+    # verifie en premier : "je veux creer mon entreprise" est deja une
+    # question suffisamment precise en soi, pas besoin du declencheur
+    # "explique-moi" pour la considerer comme une demande de vue d'ensemble) ---
+    acte = detecter_acte_dans_question(question_brute)
+    if acte:
+        try:
+            resultat_acte = construire_contexte_acte(acte, db)
+        except Exception as e:
+            print(f"[Fisca AI][RAG][Acte] Échec construction ({type(e).__name__}: {e}) — repli sur la recherche standard.")
+            resultat_acte = None
+        if resultat_acte:
+            contexte_acte, ids_acte = resultat_acte
+            prompt_acte = (
+                SYSTEM_PROMPT + "\n\n"
+                "L'utilisateur pose une question sur une DEMARCHE ou UNE ACTION "
+                "concrete d'entreprise (ex. creer son entreprise, faire face a un "
+                "controle). Voici une vue d'ensemble structuree, croisant plusieurs "
+                "sources pertinentes pour cette demarche :\n\n"
+                f"{contexte_acte}\n\nQuestion : {question_brute}"
+            )
+            try:
+                reponse_texte = call_gemini_llm(
+                    _gemini_client, prompt_acte, model=GEMINI_MODEL,
+                    max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS,
+                    timeout_secondes=GEMINI_TIMEOUT_SECONDS,
+                )
+                if reponse_texte.strip():
+                    duree = time.time() - debut
+                    suspects = check_no_hallucinated_articles(reponse_texte, ids_acte)
+                    print(f"[Fisca AI][RAG][Acte] SUCCÈS — acte={acte}, durée={duree:.1f}s, suspects={suspects or 'aucun'}.")
+                    return {
+                        "niveau": 1,
+                        "reponse": reponse_texte.strip(),
+                        "source": f"Vue d'ensemble générée par l'IA (acte : {acte}) — CGI 2026",
+                        "verified": not suspects,
+                        "question_comprise": question_brute,
+                        "moteur": "rag_acte",
+                    }
+            except Exception as e:
+                print(f"[Fisca AI][RAG][Acte] Rédaction en échec ({type(e).__name__}: {e}) — repli sur la recherche standard.")
+
+    # --- Tentative "procédure" (Espace Procédures - Groupe A + régimes
+    # spéciaux), si aucun acte plus précis n'a matché ---
+    if not acte:
+        procedure = detecter_procedure_dans_question(question_brute)
+        if procedure:
+            try:
+                resultat_procedure = construire_contexte_procedure(procedure, db)
+            except Exception as e:
+                print(f"[Fisca AI][RAG][Procédure] Échec construction ({type(e).__name__}: {e}) — repli sur la recherche standard.")
+                resultat_procedure = None
+            if resultat_procedure:
+                contexte_procedure, ids_procedure = resultat_procedure
+                prompt_procedure = (
+                    SYSTEM_PROMPT + "\n\n"
+                    "L'utilisateur pose une question sur une PROCEDURE fiscale "
+                    "transversale (applicable a tous les impots concernes, pas "
+                    "specifique a un seul). Voici une vue d'ensemble structurée :\n\n"
+                    f"{contexte_procedure}\n\nQuestion : {question_brute}"
+                )
+                try:
+                    reponse_texte = call_gemini_llm(
+                        _gemini_client, prompt_procedure, model=GEMINI_MODEL,
+                        max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS,
+                        timeout_secondes=GEMINI_TIMEOUT_SECONDS,
+                    )
+                    if reponse_texte.strip():
+                        duree = time.time() - debut
+                        suspects = check_no_hallucinated_articles(reponse_texte, ids_procedure)
+                        print(f"[Fisca AI][RAG][Procédure] SUCCÈS — procédure={procedure}, durée={duree:.1f}s, suspects={suspects or 'aucun'}.")
+                        return {
+                            "niveau": 1,
+                            "reponse": reponse_texte.strip(),
+                            "source": f"Vue d'ensemble générée par l'IA ({procedure}) — CGI 2026",
+                            "verified": not suspects,
+                            "question_comprise": question_brute,
+                            "moteur": "rag_procedure",
+                        }
+                except Exception as e:
+                    print(f"[Fisca AI][RAG][Procédure] Rédaction en échec ({type(e).__name__}: {e}) — repli sur la recherche standard.")
 
     # --- Tentative "fiche" pour les questions larges (Phase 5) ---
     if est_question_large(question_brute):
