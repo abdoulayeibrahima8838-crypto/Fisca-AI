@@ -22,19 +22,31 @@
       {
         "matiere_ou_categorie": "Procédures - Identification",
         "section": "Déclaration d’existence et immatriculation fiscale",
-        "nombre_articles": 7
+        "libelle": "Déclaration d’existence et immatriculation fiscale",
+        "nombre_articles": 7,
+        "articles": [
+          "774",
+          "775",
+          "776",
+          "777",
+          "778",
+          "779",
+          "780"
+        ]
       },
       {
         "matiere_ou_categorie": "__articles__",
-        "section": [
+        "section": null,
+        "libelle": "Choix du régime d'imposition",
+        "nombre_articles": 6,
+        "articles": [
           "118",
           "119",
           "120",
           "121",
           "122",
           "131"
-        ],
-        "nombre_articles": 6
+        ]
       }
     ]
   },
@@ -72,17 +84,50 @@
       {
         "matiere_ou_categorie": "Procédures - Obligations déclaratives",
         "section": null,
-        "nombre_articles": 16
+        "libelle": "Procédures - Obligations déclaratives",
+        "nombre_articles": 16,
+        "articles": [
+          "783",
+          "784",
+          "785",
+          "786",
+          "787",
+          "788",
+          "789",
+          "790",
+          "791",
+          "792",
+          "793",
+          "794",
+          "795",
+          "796",
+          "797",
+          "798"
+        ]
       },
       {
         "matiere_ou_categorie": "Procédures - Recouvrement",
         "section": "Modalités de paiement",
-        "nombre_articles": 5
+        "libelle": "Modalités de paiement",
+        "nombre_articles": 5,
+        "articles": [
+          "707",
+          "708",
+          "709",
+          "710",
+          "711"
+        ]
       },
       {
         "matiere_ou_categorie": "Procédures - Obligations de facturation",
         "section": null,
-        "nombre_articles": 3
+        "libelle": "Procédures - Obligations de facturation",
+        "nombre_articles": 3,
+        "articles": [
+          "802",
+          "803",
+          "804"
+        ]
       }
     ]
   },
@@ -103,7 +148,17 @@
       {
         "matiere_ou_categorie": "Procédures - Identification",
         "section": "Déclaration d’existence et immatriculation fiscale",
-        "nombre_articles": 7
+        "libelle": "Déclaration d’existence et immatriculation fiscale",
+        "nombre_articles": 7,
+        "articles": [
+          "774",
+          "775",
+          "776",
+          "777",
+          "778",
+          "779",
+          "780"
+        ]
       }
     ]
   },
@@ -132,12 +187,33 @@
       {
         "matiere_ou_categorie": "Procédures - Identification",
         "section": null,
-        "nombre_articles": 9
+        "libelle": "Procédures - Identification",
+        "nombre_articles": 9,
+        "articles": [
+          "774",
+          "775",
+          "776",
+          "777",
+          "778",
+          "779",
+          "780",
+          "781",
+          "782"
+        ]
       },
       {
         "matiere_ou_categorie": "Procédures - Garanties du contribuable",
         "section": "Délais de reprise",
-        "nombre_articles": 6
+        "libelle": "Délais de reprise",
+        "nombre_articles": 6,
+        "articles": [
+          "676",
+          "677",
+          "678",
+          "679",
+          "680",
+          "681"
+        ]
       }
     ]
   },
@@ -193,17 +269,68 @@
       {
         "matiere_ou_categorie": "Procédures - Contrôle",
         "section": null,
-        "nombre_articles": 30
+        "libelle": "Procédures - Contrôle",
+        "nombre_articles": 30,
+        "articles": [
+          "631",
+          "632",
+          "633",
+          "634",
+          "635",
+          "636",
+          "637",
+          "638",
+          "639",
+          "640",
+          "641",
+          "642",
+          "643",
+          "644",
+          "645",
+          "647",
+          "648",
+          "649",
+          "650",
+          "651",
+          "652",
+          "653",
+          "654",
+          "655",
+          "656",
+          "657",
+          "658",
+          "659",
+          "660",
+          "661"
+        ]
       },
       {
         "matiere_ou_categorie": "Procédures - Rectification",
         "section": "Procédure de rectification contradictoire",
-        "nombre_articles": 8
+        "libelle": "Procédure de rectification contradictoire",
+        "nombre_articles": 8,
+        "articles": [
+          "663",
+          "664",
+          "665",
+          "666",
+          "667",
+          "668",
+          "669",
+          "670"
+        ]
       },
       {
         "matiere_ou_categorie": "Procédures - Rectification",
         "section": "Procédure de taxation d’office",
-        "nombre_articles": 4
+        "libelle": "Procédure de taxation d’office",
+        "nombre_articles": 4,
+        "articles": [
+          "671",
+          "672",
+          "673",
+          "674"
+        ]
       }
     ]
   },
@@ -229,7 +356,22 @@
       {
         "matiere_ou_categorie": "Procédures - Garanties du contribuable",
         "section": null,
-        "nombre_articles": 12
+        "libelle": "Procédures - Garanties du contribuable",
+        "nombre_articles": 12,
+        "articles": [
+          "675",
+          "676",
+          "677",
+          "678",
+          "679",
+          "680",
+          "681",
+          "682",
+          "683",
+          "684",
+          "685",
+          "686"
+        ]
       }
     ]
   },
@@ -299,12 +441,74 @@
       {
         "matiere_ou_categorie": "__theme__",
         "section": "Exonérations",
-        "nombre_articles": 7
+        "libelle": "Exonérations",
+        "nombre_articles": 7,
+        "articles": [
+          "322",
+          "370",
+          "437",
+          "869",
+          "870",
+          "871",
+          "1044"
+        ]
       },
       {
         "matiere_ou_categorie": "__transversal__",
         "section": "Déductions",
-        "nombre_articles": 49
+        "libelle": "Déductions",
+        "nombre_articles": 49,
+        "articles": [
+          "16",
+          "17",
+          "22",
+          "23",
+          "24",
+          "25",
+          "27",
+          "30",
+          "31",
+          "34",
+          "35",
+          "37",
+          "38",
+          "39",
+          "40",
+          "41",
+          "42",
+          "43",
+          "44",
+          "45",
+          "46",
+          "49",
+          "50",
+          "51",
+          "53",
+          "55",
+          "78",
+          "84",
+          "111",
+          "150",
+          "175",
+          "241",
+          "259",
+          "289",
+          "337",
+          "338",
+          "339",
+          "340",
+          "345",
+          "346",
+          "347",
+          "349",
+          "350",
+          "353",
+          "355",
+          "526",
+          "803",
+          "859",
+          "864"
+        ]
       }
     ]
   },
@@ -426,17 +630,134 @@
       {
         "matiere_ou_categorie": "Procédures - Sanctions",
         "section": null,
-        "nombre_articles": 31
+        "libelle": "Procédures - Sanctions",
+        "nombre_articles": 31,
+        "articles": [
+          "809",
+          "810",
+          "811",
+          "812",
+          "813",
+          "815",
+          "814",
+          "816",
+          "817",
+          "818",
+          "819",
+          "820",
+          "821",
+          "822",
+          "823",
+          "824",
+          "825",
+          "828",
+          "826",
+          "827",
+          "829",
+          "830",
+          "831",
+          "832",
+          "833",
+          "834",
+          "835",
+          "836",
+          "837",
+          "838",
+          "839"
+        ]
       },
       {
         "matiere_ou_categorie": "Procédures - Recouvrement",
         "section": null,
-        "nombre_articles": 69
+        "libelle": "Procédures - Recouvrement",
+        "nombre_articles": 69,
+        "articles": [
+          "704",
+          "705",
+          "706",
+          "707",
+          "708",
+          "709",
+          "710",
+          "711",
+          "712",
+          "713",
+          "714",
+          "715",
+          "716",
+          "717",
+          "718",
+          "719",
+          "720",
+          "721",
+          "722",
+          "723",
+          "724",
+          "725",
+          "726",
+          "727",
+          "728",
+          "729",
+          "730",
+          "731",
+          "732",
+          "733",
+          "734",
+          "735",
+          "739",
+          "736",
+          "737",
+          "738",
+          "740",
+          "741",
+          "742",
+          "743",
+          "744",
+          "745",
+          "746",
+          "747",
+          "748",
+          "749",
+          "750",
+          "751",
+          "752",
+          "753",
+          "754",
+          "755",
+          "756",
+          "757",
+          "758",
+          "759",
+          "760",
+          "761",
+          "763",
+          "762",
+          "764",
+          "765",
+          "766",
+          "767",
+          "768",
+          "769",
+          "770",
+          "771",
+          "772"
+        ]
       },
       {
         "matiere_ou_categorie": "Procédures - Contentieux",
         "section": null,
-        "nombre_articles": 8
+        "libelle": "Procédures - Contentieux",
+        "nombre_articles": 8,
+        "articles": [
+          "693",
+          "694",
+          "695",
+          "696",
+          "697",
+          "699",
+          "700",
+          "701"
+        ]
       }
     ]
   }
