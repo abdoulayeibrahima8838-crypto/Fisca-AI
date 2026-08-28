@@ -69,7 +69,8 @@ SYSTEM_PROMPT = (
     "d'ecrire, identifie mentalement l'essentiel : le fait principal, "
     "l'article qui le fonde, et les conditions cles s'il y en a. "
     "Laisse volontairement de cote les details secondaires plutot que "
-    "de risquer une reponse interrompue. Une reponse fait normalement "
+    "de risquer une reponse interrompue - RESUME plutot que de tout "
+    "dire. Une reponse fait normalement "
     "3 a 6 phrases ; va au-dela uniquement si la question exige "
     "vraiment plusieurs points distincts (ex. une liste de sanctions). "
     "Ta reponse doit TOUJOURS etre complete et jamais coupee en plein "
@@ -761,7 +762,14 @@ def repondre_rag(question_brute, db, historique=None):
                 "L'utilisateur pose une question sur une DEMARCHE ou UNE ACTION "
                 "concrete d'entreprise (ex. creer son entreprise, faire face a un "
                 "controle). Voici une vue d'ensemble structuree, croisant plusieurs "
-                "sources pertinentes pour cette demarche :\n\n"
+                "sources pertinentes pour cette demarche.\n\n"
+                "IMPORTANT : cette demarche croise plusieurs sujets a la fois - ne "
+                "developpe PAS chaque source en detail, cela depasserait la longueur "
+                "autorisee et couperait ta reponse en plein milieu. Fais plutot un "
+                "RESUME STRUCTURE : les points cles a retenir pour chaque grande "
+                "etape, avec l'article correspondant, en une phrase ou deux par "
+                "point maximum. Termine toujours ta reponse, meme si cela signifie "
+                "resumer plus brievement plutot que de tout dire.\n\n"
                 f"{contexte_acte}\n\nQuestion : {question_brute}"
             )
             try:
@@ -777,7 +785,7 @@ def repondre_rag(question_brute, db, historique=None):
                     return {
                         "niveau": 1,
                         "reponse": reponse_texte.strip(),
-                        "source": f"Vue d'ensemble générée par l'IA (acte : {acte}) — CGI 2026",
+                        "source": f"Vue d'ensemble générée par l'IA (acte : {acte}) — articles {', '.join(ids_acte)} du CGI 2026",
                         "verified": not suspects,
                         "question_comprise": question_brute,
                         "moteur": "rag_acte",
@@ -801,7 +809,13 @@ def repondre_rag(question_brute, db, historique=None):
                     SYSTEM_PROMPT + "\n\n"
                     "L'utilisateur pose une question sur une PROCEDURE fiscale "
                     "transversale (applicable a tous les impots concernes, pas "
-                    "specifique a un seul). Voici une vue d'ensemble structurée :\n\n"
+                    "specifique a un seul). Voici une vue d'ensemble structurée.\n\n"
+                    "IMPORTANT : ne developpe PAS chaque section en detail, cela "
+                    "depasserait la longueur autorisee et couperait ta reponse en "
+                    "plein milieu. Fais plutot un RESUME STRUCTURE : les points "
+                    "cles a retenir, avec l'article correspondant, en une phrase "
+                    "ou deux par point maximum. Termine toujours ta reponse, meme "
+                    "si cela signifie resumer plus brievement plutot que de tout dire.\n\n"
                     f"{contexte_procedure}\n\nQuestion : {question_brute}"
                 )
                 try:
@@ -817,7 +831,7 @@ def repondre_rag(question_brute, db, historique=None):
                         return {
                             "niveau": 1,
                             "reponse": reponse_texte.strip(),
-                            "source": f"Vue d'ensemble générée par l'IA ({procedure}) — CGI 2026",
+                            "source": f"Vue d'ensemble générée par l'IA ({procedure}) — articles {', '.join(ids_procedure)} du CGI 2026",
                             "verified": not suspects,
                             "question_comprise": question_brute,
                             "moteur": "rag_procedure",
@@ -839,7 +853,14 @@ def repondre_rag(question_brute, db, historique=None):
                 prompt_fiche = (
                     SYSTEM_PROMPT + "\n\n"
                     "L'utilisateur pose une question large sur un impôt/une matière fiscale entière. "
-                    "Voici une vue d'ensemble structurée par thème :\n\n"
+                    "Voici une vue d'ensemble structurée par thème.\n\n"
+                    "IMPORTANT : ne developpe PAS chaque theme en detail, cela "
+                    "depasserait la longueur autorisee et couperait ta reponse en "
+                    "plein milieu. Fais plutot un RESUME STRUCTURE : les points "
+                    "cles a retenir par theme, avec l'article correspondant, en "
+                    "une phrase ou deux par point maximum. Termine toujours ta "
+                    "reponse, meme si cela signifie resumer plus brievement "
+                    "plutot que de tout dire.\n\n"
                     f"{contexte_fiche}\n\nQuestion : {question_brute}"
                 )
                 try:
@@ -855,7 +876,7 @@ def repondre_rag(question_brute, db, historique=None):
                         return {
                             "niveau": 1,
                             "reponse": reponse_texte.strip(),
-                            "source": f"Vue d'ensemble générée par l'IA (fiche {matiere}) — CGI 2026",
+                            "source": f"Vue d'ensemble générée par l'IA (fiche {matiere}) — articles {', '.join(ids_fiche)} du CGI 2026",
                             "verified": not suspects,
                             "question_comprise": question_brute,
                             "moteur": "rag_fiche",
