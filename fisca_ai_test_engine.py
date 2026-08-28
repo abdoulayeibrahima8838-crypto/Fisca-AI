@@ -38,6 +38,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime, timezone
 
@@ -102,6 +103,31 @@ def verifier_valeurs_deterministes(expected_values, textes_articles_trouves):
     return len(manquantes) == 0, manquantes
 
 
+def embed_question_avec_retry(client, question, max_tentatives=3, delai_base=2):
+    """Enveloppe embed_question avec une nouvelle tentative automatique en
+    cas d'erreur transitoire (429 quota depasse, 503 surcharge) - le meme
+    genre d'erreur que Fisca AI rencontre parfois en production, mais ici
+    sur un enchainement de 200+ appels rapproches, le risque est plus
+    eleve de tomber sur une limite de debit temporaire (pas la limite
+    quotidienne, une limite par minute/seconde). Sans cette protection,
+    UNE SEULE erreur transitoire fait echouer le test, alors qu'un simple
+    reessai aurait suffi."""
+    derniere_erreur = None
+    for tentative in range(1, max_tentatives + 1):
+        try:
+            return embed_question(client, question)
+        except Exception as e:
+            derniere_erreur = e
+            message = str(e).lower()
+            est_transitoire = "429" in message or "503" in message or "unavailable" in message or "resource_exhausted" in message
+            if not est_transitoire or tentative == max_tentatives:
+                raise
+            delai = delai_base * tentative
+            print(f"    (tentative {tentative}/{max_tentatives} échouée : {type(e).__name__} — nouvel essai dans {delai}s)")
+            time.sleep(delai)
+    raise derniere_erreur
+
+
 def executer_test_hors_perimetre(test, client, conn):
     """Test heuristique (SANS LLM Judge) pour les questions hors-perimetre
     et articles inexistants (§7.6/§7.10 du document de conception) : verifie
@@ -114,7 +140,7 @@ def executer_test_hors_perimetre(test, client, conn):
         "critical": test.get("critical", False), "erreurs": [],
     }
     try:
-        vecteur = embed_question(client, test["question"])
+        vecteur = embed_question_avec_retry(client, test["question"])
         pivots = recherche_hybride(conn, vecteur, test["question"], top_k=5)
         meilleur_score = max((a.score for a in pivots), default=0.0)
         resultat["meilleur_score"] = round(meilleur_score, 4)
@@ -149,7 +175,7 @@ def executer_test_recherche(test, client, conn):
         "erreurs": [],
     }
     try:
-        vecteur = embed_question(client, test["question"])
+        vecteur = embed_question_avec_retry(client, test["question"])
         pivots = recherche_hybride(conn, vecteur, test["question"], top_k=10)
         ids_trouves = [a.article_id for a in pivots]
         textes_trouves = [a.text for a in pivots]
@@ -300,10 +326,14 @@ def main():
             continue  # informationnel seul, pas de metrique
         else:
             r = executer_test_recherche(test, client, conn)
+            time.sleep(0.3)  # petit delai pour eviter de saturer une eventuelle
+                               # limite de debit par minute (distincte du quota
+                               # journalier) sur 200+ appels rapproches
 
         resultats.append(r)
         marqueur = "🔴 CRITICAL" if (r["statut"] == "FAIL" and r["critical"]) else ("✅" if r["statut"] == "PASS" else "⚠️" if r["statut"] == "À ANALYSER" else "❌")
-        print(f"[{r['id']}] {marqueur} {r['statut']} — {cat}" + (f" — {', '.join(r['erreurs'])}" if r["erreurs"] else ""))
+        detail_erreur = f" — {r['exception']}" if r.get("exception") else (f" — {', '.join(r['erreurs'])}" if r["erreurs"] else "")
+        print(f"[{r['id']}] {marqueur} {r['statut']} — {cat}{detail_erreur}")
 
     conn.close()
 
@@ -380,3 +410,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
