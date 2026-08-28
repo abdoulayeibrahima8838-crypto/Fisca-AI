@@ -34,7 +34,14 @@ from vocabulaire import elargir_question
 
 TOP_K_VECTOR = 5          # nb d'articles récupérés par similarité vectorielle
 TOP_K_MOTS_CLES = 5       # nb d'articles récupérés par recherche mots-clés
-MAX_EXPANSION_PER_ARTICLE = 4  # nb max de renvois ajoutés par article pivot
+MAX_EXPANSION_PER_ARTICLE = 2  # nb max de renvois ajoutés par article pivot
+                                 # (resserré de 4 à 2 le 28/08 - un cas reel a montre
+                                 # que 5 pivots x 4 renvois = 25 articles au total rendait
+                                 # les reponses trop lentes (43s) et propices aux erreurs
+                                 # de citation, Gemini se perdant dans un contexte trop
+                                 # volumineux. Les relations les plus fortes (SANCTIONNE_PAR,
+                                 # DEFINI_PAR) restent triees en premier, donc toujours
+                                 # incluses en priorite malgre le plafond plus bas.
 SEUIL_POIDS_EXPANSION_NIVEAU1 = 0.80  # en dessous, un renvoi n'est ajoute qu'en dernier recours
 
 
