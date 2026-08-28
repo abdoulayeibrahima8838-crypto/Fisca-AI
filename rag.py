@@ -256,6 +256,7 @@ def recherche_hybride(db, query_embedding, question, top_k=TOP_K_VECTOR):
         "394sexies": ["taux de la taxe sur les dépôts", "taux de la taxe sur les dépôts et transferts d'argent"],
         "394decies": ["qu'est-ce que la taxe sur les paiements en numéraire", "assujettis à la taxe sur les paiements en numéraire"],
         "394nonies": ["collecter la taxe sur les dépôts", "qui doit collecter la taxe sur les dépôts et transferts d'argent"],
+        "682": ["doctrine fiscale"],  # l'article definit le concept sans jamais utiliser le mot "doctrine"
     }
 
     question_elargie = elargir_question(question)
