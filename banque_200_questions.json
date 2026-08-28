@@ -6,7 +6,21 @@
     "articles_attendus": [
       "58"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [
+        "30%"
+      ],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T002",
@@ -16,7 +30,19 @@
       "16",
       "17"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T003",
@@ -25,7 +51,19 @@
     "articles_attendus": [
       "94"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T004",
@@ -35,7 +73,19 @@
       "14",
       "15"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T005",
@@ -44,7 +94,19 @@
     "articles_attendus": [
       "68"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T006",
@@ -54,7 +116,19 @@
       "6",
       "7"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T007",
@@ -63,7 +137,19 @@
     "articles_attendus": [
       "118"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T008",
@@ -72,7 +158,19 @@
     "articles_attendus": [
       "119"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T009",
@@ -81,7 +179,19 @@
     "articles_attendus": [
       "120"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T010",
@@ -90,7 +200,19 @@
     "articles_attendus": [
       "67"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T011",
@@ -100,7 +222,19 @@
       "73",
       "74"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T012",
@@ -109,7 +243,19 @@
     "articles_attendus": [
       "13"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T013",
@@ -118,7 +264,19 @@
     "articles_attendus": [
       "336"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T014",
@@ -128,7 +286,19 @@
       "319",
       "320"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T015",
@@ -137,7 +307,19 @@
     "articles_attendus": [
       "322"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T016",
@@ -146,7 +328,19 @@
     "articles_attendus": [
       "354"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T017",
@@ -155,7 +349,19 @@
     "articles_attendus": [
       "332"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T018",
@@ -165,7 +371,19 @@
       "337",
       "338"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T019",
@@ -175,7 +393,19 @@
       "339",
       "340"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T020",
@@ -184,7 +414,19 @@
     "articles_attendus": [
       "354"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T021",
@@ -193,7 +435,19 @@
     "articles_attendus": [
       "355"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T022",
@@ -202,7 +456,19 @@
     "articles_attendus": [
       "363"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T023",
@@ -212,7 +478,19 @@
       "328",
       "331"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T024",
@@ -222,7 +500,19 @@
       "328",
       "329"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T025",
@@ -231,7 +521,19 @@
     "articles_attendus": [
       "137"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T026",
@@ -240,7 +542,19 @@
     "articles_attendus": [
       "145"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T027",
@@ -249,7 +563,19 @@
     "articles_attendus": [
       "142"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T028",
@@ -258,7 +584,19 @@
     "articles_attendus": [
       "153"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T029",
@@ -268,7 +606,19 @@
       "143",
       "144"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T030",
@@ -277,7 +627,19 @@
     "articles_attendus": [
       "152"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T031",
@@ -286,7 +648,19 @@
     "articles_attendus": [
       "152"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T032",
@@ -296,7 +670,19 @@
       "143",
       "144"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T033",
@@ -306,7 +692,19 @@
       "145",
       "146"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T034",
@@ -315,7 +713,19 @@
     "articles_attendus": [
       "143"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T035",
@@ -324,7 +734,19 @@
     "articles_attendus": [
       "162"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T036",
@@ -334,7 +756,19 @@
       "166",
       "165"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T037",
@@ -343,7 +777,19 @@
     "articles_attendus": [
       "167"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T038",
@@ -352,7 +798,19 @@
     "articles_attendus": [
       "171"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T039",
@@ -362,7 +820,19 @@
       "167",
       "168"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T040",
@@ -371,7 +841,19 @@
     "articles_attendus": [
       "164"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T041",
@@ -380,7 +862,19 @@
     "articles_attendus": [
       "168"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T042",
@@ -389,7 +883,19 @@
     "articles_attendus": [
       "171"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T043",
@@ -398,7 +904,19 @@
     "articles_attendus": [
       "281"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T044",
@@ -408,7 +926,19 @@
       "278",
       "279"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T045",
@@ -417,7 +947,19 @@
     "articles_attendus": [
       "290"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T046",
@@ -426,7 +968,19 @@
     "articles_attendus": [
       "291"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T047",
@@ -437,7 +991,19 @@
       "279",
       "296"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T048",
@@ -446,7 +1012,19 @@
     "articles_attendus": [
       "279"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T049",
@@ -455,7 +1033,23 @@
     "articles_attendus": [
       "291"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [
+        "1‰"
+      ],
+      "amounts": [
+        "75000"
+      ],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T050",
@@ -464,7 +1058,19 @@
     "articles_attendus": [
       "293"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T051",
@@ -473,7 +1079,19 @@
     "articles_attendus": [
       "281"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T052",
@@ -482,7 +1100,19 @@
     "articles_attendus": [
       "278"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T053",
@@ -491,7 +1121,19 @@
     "articles_attendus": [
       "260"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T054",
@@ -500,7 +1142,19 @@
     "articles_attendus": [
       "261"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T055",
@@ -509,7 +1163,19 @@
     "articles_attendus": [
       "261"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T056",
@@ -518,7 +1184,19 @@
     "articles_attendus": [
       "262"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T057",
@@ -528,7 +1206,19 @@
       "264",
       "265"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T058",
@@ -537,7 +1227,19 @@
     "articles_attendus": [
       "273"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T059",
@@ -546,7 +1248,19 @@
     "articles_attendus": [
       "264"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T060",
@@ -555,7 +1269,19 @@
     "articles_attendus": [
       "259"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T061",
@@ -565,7 +1291,19 @@
       "586",
       "587"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T062",
@@ -575,7 +1313,19 @@
       "435",
       "436"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T063",
@@ -584,7 +1334,19 @@
     "articles_attendus": [
       "481"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T064",
@@ -594,7 +1356,19 @@
       "443",
       "449"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T065",
@@ -604,7 +1378,19 @@
       "561",
       "562"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T066",
@@ -613,7 +1399,19 @@
     "articles_attendus": [
       "541"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T067",
@@ -623,7 +1421,19 @@
       "437",
       "557"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T068",
@@ -632,7 +1442,19 @@
     "articles_attendus": [
       "560"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T069",
@@ -641,7 +1463,19 @@
     "articles_attendus": [
       "463"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T070",
@@ -650,7 +1484,19 @@
     "articles_attendus": [
       "466"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T071",
@@ -659,7 +1505,19 @@
     "articles_attendus": [
       "804"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T072",
@@ -668,7 +1526,19 @@
     "articles_attendus": [
       "804"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T073",
@@ -678,7 +1548,19 @@
       "802",
       "803"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T074",
@@ -687,7 +1569,19 @@
     "articles_attendus": [
       "804"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T075",
@@ -697,7 +1591,19 @@
       "802",
       "803"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T076",
@@ -706,7 +1612,19 @@
     "articles_attendus": [
       "808"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T077",
@@ -715,7 +1633,19 @@
     "articles_attendus": [
       "804"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T078",
@@ -724,7 +1654,19 @@
     "articles_attendus": [
       "804"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T079",
@@ -734,7 +1676,19 @@
       "774",
       "775"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T080",
@@ -743,7 +1697,19 @@
     "articles_attendus": [
       "774"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T081",
@@ -752,7 +1718,19 @@
     "articles_attendus": [
       "775"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T082",
@@ -761,7 +1739,19 @@
     "articles_attendus": [
       "774"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T083",
@@ -770,7 +1760,19 @@
     "articles_attendus": [
       "774"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T084",
@@ -779,7 +1781,19 @@
     "articles_attendus": [
       "781"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T085",
@@ -788,7 +1802,24 @@
     "articles_attendus": [
       "774"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [
+        "100000",
+        "200000"
+      ],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": [
+        "30 jours"
+      ]
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T086",
@@ -797,7 +1828,19 @@
     "articles_attendus": [
       "775"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T087",
@@ -806,7 +1849,19 @@
     "articles_attendus": [
       "805"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T088",
@@ -815,7 +1870,19 @@
     "articles_attendus": [
       "805"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T089",
@@ -824,7 +1891,19 @@
     "articles_attendus": [
       "805"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T090",
@@ -833,7 +1912,19 @@
     "articles_attendus": [
       "805"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T091",
@@ -842,7 +1933,19 @@
     "articles_attendus": [
       "805"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T092",
@@ -853,7 +1956,19 @@
       "645",
       "647"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T093",
@@ -862,7 +1977,19 @@
     "articles_attendus": [
       "631"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T094",
@@ -871,7 +1998,19 @@
     "articles_attendus": [
       "636"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T095",
@@ -880,7 +2019,19 @@
     "articles_attendus": [
       "637"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T096",
@@ -889,7 +2040,19 @@
     "articles_attendus": [
       "645"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T097",
@@ -899,7 +2062,19 @@
       "647",
       "648"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T098",
@@ -908,7 +2083,19 @@
     "articles_attendus": [
       "659"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T099",
@@ -918,7 +2105,19 @@
       "676",
       "677"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T100",
@@ -928,7 +2127,19 @@
       "647",
       "648"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T101",
@@ -937,7 +2148,19 @@
     "articles_attendus": [
       "676"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T102",
@@ -946,7 +2169,19 @@
     "articles_attendus": [
       "663"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T103",
@@ -955,7 +2190,19 @@
     "articles_attendus": [
       "671"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T104",
@@ -964,7 +2211,19 @@
     "articles_attendus": [
       "671"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T105",
@@ -974,7 +2233,19 @@
       "664",
       "665"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T106",
@@ -983,7 +2254,19 @@
     "articles_attendus": [
       "640"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T107",
@@ -993,7 +2276,19 @@
       "641",
       "642"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T108",
@@ -1002,7 +2297,19 @@
     "articles_attendus": [
       "671"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T109",
@@ -1011,7 +2318,19 @@
     "articles_attendus": [
       "694"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T110",
@@ -1021,7 +2340,19 @@
       "675",
       "676"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T111",
@@ -1030,7 +2361,19 @@
     "articles_attendus": [
       "683"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T112",
@@ -1039,7 +2382,19 @@
     "articles_attendus": [
       "683"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T113",
@@ -1048,7 +2403,19 @@
     "articles_attendus": [
       "682"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T114",
@@ -1057,7 +2424,19 @@
     "articles_attendus": [
       "682"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T115",
@@ -1066,7 +2445,19 @@
     "articles_attendus": [
       "684"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T116",
@@ -1075,7 +2466,19 @@
     "articles_attendus": [
       "676"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T117",
@@ -1084,7 +2487,19 @@
     "articles_attendus": [
       "675"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T118",
@@ -1093,7 +2508,19 @@
     "articles_attendus": [
       "686"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T119",
@@ -1102,7 +2529,19 @@
     "articles_attendus": [
       "683"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T120",
@@ -1111,7 +2550,19 @@
     "articles_attendus": [
       "810"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T121",
@@ -1120,7 +2571,19 @@
     "articles_attendus": [
       "818"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T122",
@@ -1130,7 +2593,19 @@
       "809",
       "810"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T123",
@@ -1139,7 +2614,19 @@
     "articles_attendus": [
       "812"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T124",
@@ -1148,7 +2635,19 @@
     "articles_attendus": [
       "810"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T125",
@@ -1157,7 +2656,19 @@
     "articles_attendus": [
       "818"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T126",
@@ -1166,7 +2677,19 @@
     "articles_attendus": [
       "810"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T127",
@@ -1175,7 +2698,19 @@
     "articles_attendus": [
       "808"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T128",
@@ -1184,7 +2719,19 @@
     "articles_attendus": [
       "836"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T129",
@@ -1193,7 +2740,19 @@
     "articles_attendus": [
       "810"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T130",
@@ -1203,7 +2762,19 @@
       "704",
       "705"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T131",
@@ -1212,7 +2783,19 @@
     "articles_attendus": [
       "705"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T132",
@@ -1221,7 +2804,19 @@
     "articles_attendus": [
       "712"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T133",
@@ -1230,7 +2825,19 @@
     "articles_attendus": [
       "757"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T134",
@@ -1239,7 +2846,19 @@
     "articles_attendus": [
       "762"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T135",
@@ -1249,7 +2868,19 @@
       "723",
       "724"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T136",
@@ -1258,7 +2889,19 @@
     "articles_attendus": [
       "766"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T137",
@@ -1268,7 +2911,19 @@
       "693",
       "700"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T138",
@@ -1277,7 +2932,19 @@
     "articles_attendus": [
       "693"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T139",
@@ -1286,7 +2953,19 @@
     "articles_attendus": [
       "693"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T140",
@@ -1295,7 +2974,19 @@
     "articles_attendus": [
       "693"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T141",
@@ -1304,7 +2995,19 @@
     "articles_attendus": [
       "700"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T142",
@@ -1313,7 +3016,19 @@
     "articles_attendus": [
       "690"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T143",
@@ -1322,7 +3037,19 @@
     "articles_attendus": [
       "690"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T144",
@@ -1331,7 +3058,21 @@
     "articles_attendus": [
       "694"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": [
+        "2 mois"
+      ]
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T145",
@@ -1340,14 +3081,38 @@
     "articles_attendus": [
       "693"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T146",
     "question": "Quel est le taux de la vraie taxe sur le forfait, pas le régime ?",
     "categorie": "piège_confusion",
     "articles_attendus": null,
-    "note": "Question piege volontairement ambigue - ne doit pas hallucinar une taxe qui n'existe pas sous ce nom"
+    "note": "Question piege volontairement ambigue - ne doit pas hallucinar une taxe qui n'existe pas sous ce nom",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T147",
@@ -1357,7 +3122,19 @@
       "94",
       "67"
     ],
-    "note": "Doit distinguer clairement les deux concepts, pas les confondre"
+    "note": "Doit distinguer clairement les deux concepts, pas les confondre",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T148",
@@ -1366,7 +3143,19 @@
     "articles_attendus": [
       "119"
     ],
-    "note": "L'article 119 mentionne le forfait en passant (option) - la reponse ne doit pas se tromper d'article"
+    "note": "L'article 119 mentionne le forfait en passant (option) - la reponse ne doit pas se tromper d'article",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T149",
@@ -1376,7 +3165,19 @@
       "118",
       "119"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T150",
@@ -1385,14 +3186,38 @@
     "articles_attendus": [
       "775"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T151",
     "question": "La taxe immobilière et la taxe d'habitation sont-elles la même chose ?",
     "categorie": "piège_confusion",
     "articles_attendus": null,
-    "note": "Question comparative - pas d'article unique, verifier que la reponse distingue bien les deux taxes (264 pour TH, section Champ d'application TI)"
+    "note": "Question comparative - pas d'article unique, verifier que la reponse distingue bien les deux taxes (264 pour TH, section Champ d'application TI)",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T152",
@@ -1402,7 +3227,21 @@
       "774",
       "805"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [
+        "1500000"
+      ],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T153",
@@ -1411,7 +3250,23 @@
     "articles_attendus": [
       "67"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [
+        "20%",
+        "40%",
+        "70%"
+      ],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T154",
@@ -1420,7 +3275,19 @@
     "articles_attendus": [
       "645"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T155",
@@ -1429,7 +3296,19 @@
     "articles_attendus": [
       "690"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T156",
@@ -1438,7 +3317,21 @@
     "articles_attendus": [
       "281"
     ],
-    "note": "Piege : il existe un plancher de 75 000 FCFA"
+    "note": "Piege : il existe un plancher de 75 000 FCFA",
+    "expected_values": {
+      "rates": [],
+      "amounts": [
+        "1000000"
+      ],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T157",
@@ -1447,7 +3340,19 @@
     "articles_attendus": [
       "7"
     ],
-    "note": "Piege : exception si la gestion n'est pas desinteressee ou si contrat/marche public"
+    "note": "Piege : exception si la gestion n'est pas desinteressee ou si contrat/marche public",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T158",
@@ -1456,7 +3361,19 @@
     "articles_attendus": [
       "259"
     ],
-    "note": "Piege : plafond de 50% de la base taxable"
+    "note": "Piege : plafond de 50% de la base taxable",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T159",
@@ -1465,7 +3382,19 @@
     "articles_attendus": [
       "676"
     ],
-    "note": "Piege : plusieurs delais differents selon les cas"
+    "note": "Piege : plusieurs delais differents selon les cas",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T160",
@@ -1475,7 +3404,19 @@
       "774",
       "131"
     ],
-    "note": "Piege : delai different pour le regime du forfait"
+    "note": "Piege : delai different pour le regime du forfait",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T161",
@@ -1485,7 +3426,19 @@
       "140",
       "141"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T162",
@@ -1495,7 +3448,19 @@
       "322",
       "325"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T163",
@@ -1504,7 +3469,19 @@
     "articles_attendus": [
       "694"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T164",
@@ -1513,7 +3490,19 @@
     "articles_attendus": [
       "684"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T165",
@@ -1522,7 +3511,19 @@
     "articles_attendus": [
       "818"
     ],
-    "note": "Piege : amende doublee si pas regularise dans les 30 jours"
+    "note": "Piege : amende doublee si pas regularise dans les 30 jours",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "exception_oubliee",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T166",
@@ -1531,7 +3532,19 @@
     "articles_attendus": [
       "67"
     ],
-    "note": "Piege : \"avant le 1er juillet\" = echeance reelle le 30 juin"
+    "note": "Piege : \"avant le 1er juillet\" = echeance reelle le 30 juin",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "calcul_temporel",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T167",
@@ -1540,7 +3553,19 @@
     "articles_attendus": [
       "312"
     ],
-    "note": "Piege : \"avant le 1er avril\" = echeance reelle le 31 mars"
+    "note": "Piege : \"avant le 1er avril\" = echeance reelle le 31 mars",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "calcul_temporel",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T168",
@@ -1549,7 +3574,19 @@
     "articles_attendus": [
       "67"
     ],
-    "note": "Piege : echeance reelle le 31 aout"
+    "note": "Piege : echeance reelle le 31 aout",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "calcul_temporel",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T169",
@@ -1559,7 +3596,19 @@
       "67",
       "68"
     ],
-    "note": "Verifie la coherence avec is-declaration/is-solde du calendrier (pas de decalage ici, deja une date fixe correcte)"
+    "note": "Verifie la coherence avec is-declaration/is-solde du calendrier (pas de decalage ici, deja une date fixe correcte)",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "calcul_temporel",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T170",
@@ -1568,7 +3617,19 @@
     "articles_attendus": [
       "67"
     ],
-    "note": "Piege : echeance reelle le 31 octobre"
+    "note": "Piege : echeance reelle le 31 octobre",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "calcul_temporel",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T171",
@@ -1577,7 +3638,19 @@
     "articles_attendus": [
       "118"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T172",
@@ -1586,7 +3659,19 @@
     "articles_attendus": [
       "119"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T173",
@@ -1595,14 +3680,38 @@
     "articles_attendus": [
       "120"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T174",
     "question": "C'est quoi le NIF A ?",
     "categorie": "piège_sigle",
     "articles_attendus": null,
-    "note": "NIF A/regimes particuliers - concept existe surtout en titre de section (art 71/72/353), pas dans le corps du texte - limite connue"
+    "note": "NIF A/regimes particuliers - concept existe surtout en titre de section (art 71/72/353), pas dans le corps du texte - limite connue",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T175",
@@ -1612,7 +3721,19 @@
       "647",
       "648"
     ],
-    "note": "Verification generale / verification de comptabilite"
+    "note": "Verification generale / verification de comptabilite",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T176",
@@ -1621,7 +3742,19 @@
     "articles_attendus": [
       "645"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T177",
@@ -1630,21 +3763,57 @@
     "articles_attendus": [
       "705"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T178",
     "question": "Je pense que de nombreuses personnes se demandent de quoi il retourne",
     "categorie": "piège_vocabulaire",
     "articles_attendus": null,
-    "note": "Test 100% local du vocabulaire.py - ne necessite aucune recherche BDD, verifie juste l'absence d'elargissement a tort"
+    "note": "Test 100% local du vocabulaire.py - ne necessite aucune recherche BDD, verifie juste l'absence d'elargissement a tort",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T179",
     "question": "Je voudrais des informations sur le DE",
     "categorie": "piège_sigle",
     "articles_attendus": null,
-    "note": "NE DOIT PAS rester inchange - DE en majuscules doit bien s'elargir vers droits d'enregistrement (vocabulaire.py, test positif)"
+    "note": "NE DOIT PAS rester inchange - DE en majuscules doit bien s'elargir vers droits d'enregistrement (vocabulaire.py, test positif)",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T180",
@@ -1653,7 +3822,19 @@
     "articles_attendus": [
       "120"
     ],
-    "note": "Synonyme courant de regime du forfait"
+    "note": "Synonyme courant de regime du forfait",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_incorrecte",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T181",
@@ -1662,7 +3843,19 @@
     "articles_attendus": [
       "804"
     ],
-    "note": "Article corrige (contamination avec 805) - verifier texte propre"
+    "note": "Article corrige (contamination avec 805) - verifier texte propre",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "regression_connue",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T182",
@@ -1671,7 +3864,19 @@
     "articles_attendus": [
       "805"
     ],
-    "note": "Article corrige (contamination avec 804) - verifier texte propre"
+    "note": "Article corrige (contamination avec 804) - verifier texte propre",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "regression_connue",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T183",
@@ -1680,7 +3885,19 @@
     "articles_attendus": [
       "816"
     ],
-    "note": "Titre de section restitue cette session"
+    "note": "Titre de section restitue cette session",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "regression_connue",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T184",
@@ -1689,7 +3906,19 @@
     "articles_attendus": [
       "781"
     ],
-    "note": "Titre de section restitue cette session"
+    "note": "Titre de section restitue cette session",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "regression_connue",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T185",
@@ -1698,7 +3927,19 @@
     "articles_attendus": [
       "762"
     ],
-    "note": "Titre de section restitue cette session"
+    "note": "Titre de section restitue cette session",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "regression_connue",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T186",
@@ -1707,7 +3948,19 @@
     "articles_attendus": [
       "675"
     ],
-    "note": "Titre de section restitue cette session"
+    "note": "Titre de section restitue cette session",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "regression_connue",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T187",
@@ -1717,7 +3970,19 @@
       "73",
       "74"
     ],
-    "note": "Chapitre IBAPP (73-86) tout juste reclasse cette session - verifier que ca remonte bien"
+    "note": "Chapitre IBAPP (73-86) tout juste reclasse cette session - verifier que ca remonte bien",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "regression_connue",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T188",
@@ -1727,42 +3992,114 @@
       "297",
       "298"
     ],
-    "note": "Chapitre tout juste reclasse cette session (297-301)"
+    "note": "Chapitre tout juste reclasse cette session (297-301)",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "regression_connue",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T189",
     "question": "Je veux créer mon entreprise, que dois-je faire ?",
     "categorie": "piège_large",
     "articles_attendus": null,
-    "note": "Doit declencher le chemin ACTE (Creer son entreprise) - verifier via le log, pas un article unique"
+    "note": "Doit declencher le chemin ACTE (Creer son entreprise) - verifier via le log, pas un article unique",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "cas_pratique",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T190",
     "question": "Explique-moi toute la taxe professionnelle",
     "categorie": "piège_large",
     "articles_attendus": null,
-    "note": "Doit declencher le chemin FICHE par impot - verifier via le log"
+    "note": "Doit declencher le chemin FICHE par impot - verifier via le log",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "cas_pratique",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T191",
     "question": "Comment fonctionne le recouvrement de l'impôt ?",
     "categorie": "piège_large",
     "articles_attendus": null,
-    "note": "Doit declencher le chemin PROCEDURE - verifier via le log"
+    "note": "Doit declencher le chemin PROCEDURE - verifier via le log",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "cas_pratique",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T192",
     "question": "J'ai reçu un avis de contrôle, que dois-je faire ?",
     "categorie": "piège_large",
     "articles_attendus": null,
-    "note": "Doit declencher le chemin ACTE (Faire face a un controle) - verifier via le log"
+    "note": "Doit declencher le chemin ACTE (Faire face a un controle) - verifier via le log",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "cas_pratique",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T193",
     "question": "Quelles sanctions si je ne délivre pas de facture certifiée ?",
     "categorie": "piège_large",
     "articles_attendus": null,
-    "note": "Doit mentionner la sanction (art 808) meme sans qu'on la demande explicitement - test du bloc SANCTIONS du prompt"
+    "note": "Doit mentionner la sanction (art 808) meme sans qu'on la demande explicitement - test du bloc SANCTIONS du prompt",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "cas_pratique",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T194",
@@ -1771,7 +4108,19 @@
     "articles_attendus": [
       "118"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T195",
@@ -1781,7 +4130,19 @@
       "349",
       "350"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T196",
@@ -1790,7 +4151,19 @@
     "articles_attendus": [
       "801"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T197",
@@ -1799,7 +4172,19 @@
     "articles_attendus": [
       "827"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T198",
@@ -1808,7 +4193,19 @@
     "articles_attendus": [
       "785"
     ],
-    "note": ""
+    "note": "",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "simple",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T199",
@@ -1818,7 +4215,19 @@
       "119",
       "120"
     ],
-    "note": "Test la distinction entre 118/119/120, article 119 mentionne le forfait en exception"
+    "note": "Test la distinction entre 118/119/120, article 119 mentionne le forfait en exception",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": false,
+    "question_type": "terminologie_proche",
+    "required_points": null,
+    "reference_answer": null
   },
   {
     "id": "T200",
@@ -1827,6 +4236,61 @@
     "articles_attendus": [
       "120"
     ],
-    "note": "Re-test du bug NIF P/119 corrige cette session, formulation differente"
-  }
-]
+    "note": "Re-test du bug NIF P/119 corrige cette session, formulation differente",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "regression_connue",
+    "required_points": null,
+    "reference_answer": null
+  },
+  {
+    "id": "T201",
+    "question": "Quelle est la capitale de la France ?",
+    "categorie": "piège_hors_perimetre",
+    "articles_attendus": null,
+    "note": "Test par seuil de score (heuristique, sans LLM Judge) - le meilleur score trouve doit rester bas, signe d'absence de vraie correspondance",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "hors_perimetre",
+    "required_points": null,
+    "reference_answer": null
+  },
+  {
+    "id": "T202",
+    "question": "Comment faire une recette de riz au gras ?",
+    "categorie": "piège_hors_perimetre",
+    "articles_attendus": null,
+    "note": "Test par seuil de score (heuristique, sans LLM Judge) - le meilleur score trouve doit rester bas, signe d'absence de vraie correspondance",
+    "expected_values": {
+      "rates": [],
+      "amounts": [],
+      "thresholds": [],
+      "dates": [],
+      "deadlines": []
+    },
+    "forbidden_claims": [],
+    "critical": true,
+    "question_type": "hors_perimetre",
+    "required_points": null,
+    "reference_answer": null
+  },
+  {
+    "id": "T203",
+    "question": "Qui a gagné la coupe d'Afrique des nations ?",
+    "categorie": "piège_hors_perimetre",
+    "articles_attendus": null,
+    "note": "Test par seuil de score 
