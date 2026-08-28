@@ -343,6 +343,9 @@ def main():
         resultats.append(r)
         marqueur = "🔴 CRITICAL" if (r["statut"] == "FAIL" and r["critical"]) else ("✅" if r["statut"] == "PASS" else "⚠️" if r["statut"] == "À ANALYSER" else "❌")
         detail_erreur = f" — {r['exception']}" if r.get("exception") else (f" — {', '.join(r['erreurs'])}" if r["erreurs"] else "")
+        if r["statut"] != "PASS" and r.get("articles_trouves"):
+            attendus_txt = f" (attendu={test['articles_attendus']})" if test.get("articles_attendus") else ""
+            detail_erreur += f" — trouvé={r['articles_trouves']}{attendus_txt}"
         print(f"[{r['id']}] {marqueur} {r['statut']} — {cat}{detail_erreur}")
 
     conn.close()
