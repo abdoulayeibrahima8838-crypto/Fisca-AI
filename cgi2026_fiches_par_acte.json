@@ -1,0 +1,443 @@
+[
+  {
+    "acte": "Créer son entreprise",
+    "description": "Identification, immatriculation, choix du régime d'imposition",
+    "nombre_articles_total": 13,
+    "articles": [
+      "118",
+      "119",
+      "120",
+      "121",
+      "122",
+      "131",
+      "774",
+      "775",
+      "776",
+      "777",
+      "778",
+      "779",
+      "780"
+    ],
+    "sources": [
+      {
+        "matiere_ou_categorie": "Procédures - Identification",
+        "section": "Déclaration d’existence et immatriculation fiscale",
+        "nombre_articles": 7
+      },
+      {
+        "matiere_ou_categorie": "__articles__",
+        "section": [
+          "118",
+          "119",
+          "120",
+          "121",
+          "122",
+          "131"
+        ],
+        "nombre_articles": 6
+      }
+    ]
+  },
+  {
+    "acte": "Gérer ses obligations courantes",
+    "description": "Déclarations, paiements, facturation",
+    "nombre_articles_total": 24,
+    "articles": [
+      "707",
+      "708",
+      "709",
+      "710",
+      "711",
+      "783",
+      "784",
+      "785",
+      "786",
+      "787",
+      "788",
+      "789",
+      "790",
+      "791",
+      "792",
+      "793",
+      "794",
+      "795",
+      "796",
+      "797",
+      "798",
+      "802",
+      "803",
+      "804"
+    ],
+    "sources": [
+      {
+        "matiere_ou_categorie": "Procédures - Obligations déclaratives",
+        "section": null,
+        "nombre_articles": 16
+      },
+      {
+        "matiere_ou_categorie": "Procédures - Recouvrement",
+        "section": "Modalités de paiement",
+        "nombre_articles": 5
+      },
+      {
+        "matiere_ou_categorie": "Procédures - Obligations de facturation",
+        "section": null,
+        "nombre_articles": 3
+      }
+    ]
+  },
+  {
+    "acte": "Modifier son identification",
+    "description": "Changement d'adresse, de régime, d'activité",
+    "nombre_articles_total": 7,
+    "articles": [
+      "774",
+      "775",
+      "776",
+      "777",
+      "778",
+      "779",
+      "780"
+    ],
+    "sources": [
+      {
+        "matiere_ou_categorie": "Procédures - Identification",
+        "section": "Déclaration d’existence et immatriculation fiscale",
+        "nombre_articles": 7
+      }
+    ]
+  },
+  {
+    "acte": "Rester en règle (ARF, régularisation, suspension, radiation)",
+    "description": "Être en conformité sur toutes les années non prescrites",
+    "nombre_articles_total": 15,
+    "articles": [
+      "676",
+      "677",
+      "678",
+      "679",
+      "680",
+      "681",
+      "774",
+      "775",
+      "776",
+      "777",
+      "778",
+      "779",
+      "780",
+      "781",
+      "782"
+    ],
+    "sources": [
+      {
+        "matiere_ou_categorie": "Procédures - Identification",
+        "section": null,
+        "nombre_articles": 9
+      },
+      {
+        "matiere_ou_categorie": "Procédures - Garanties du contribuable",
+        "section": "Délais de reprise",
+        "nombre_articles": 6
+      }
+    ]
+  },
+  {
+    "acte": "Faire face à un contrôle fiscal",
+    "description": "Toutes les formes de contrôle : sur pièces, sur place, vérification, ESFP",
+    "nombre_articles_total": 42,
+    "articles": [
+      "631",
+      "632",
+      "633",
+      "634",
+      "635",
+      "636",
+      "637",
+      "638",
+      "639",
+      "640",
+      "641",
+      "642",
+      "643",
+      "644",
+      "645",
+      "647",
+      "648",
+      "649",
+      "650",
+      "651",
+      "652",
+      "653",
+      "654",
+      "655",
+      "656",
+      "657",
+      "658",
+      "659",
+      "660",
+      "661",
+      "663",
+      "664",
+      "665",
+      "666",
+      "667",
+      "668",
+      "669",
+      "670",
+      "671",
+      "672",
+      "673",
+      "674"
+    ],
+    "sources": [
+      {
+        "matiere_ou_categorie": "Procédures - Contrôle",
+        "section": null,
+        "nombre_articles": 30
+      },
+      {
+        "matiere_ou_categorie": "Procédures - Rectification",
+        "section": "Procédure de rectification contradictoire",
+        "nombre_articles": 8
+      },
+      {
+        "matiere_ou_categorie": "Procédures - Rectification",
+        "section": "Procédure de taxation d’office",
+        "nombre_articles": 4
+      }
+    ]
+  },
+  {
+    "acte": "Se protéger et anticiper",
+    "description": "Garanties du contribuable, rescrit fiscal, doctrine fiscale",
+    "nombre_articles_total": 12,
+    "articles": [
+      "675",
+      "676",
+      "677",
+      "678",
+      "679",
+      "680",
+      "681",
+      "682",
+      "683",
+      "684",
+      "685",
+      "686"
+    ],
+    "sources": [
+      {
+        "matiere_ou_categorie": "Procédures - Garanties du contribuable",
+        "section": null,
+        "nombre_articles": 12
+      }
+    ]
+  },
+  {
+    "acte": "Alléger sa charge fiscale légalement",
+    "description": "Exonérations, déductions et abattements",
+    "nombre_articles_total": 56,
+    "articles": [
+      "16",
+      "17",
+      "22",
+      "23",
+      "24",
+      "25",
+      "27",
+      "30",
+      "31",
+      "34",
+      "35",
+      "37",
+      "38",
+      "39",
+      "40",
+      "41",
+      "42",
+      "43",
+      "44",
+      "45",
+      "46",
+      "49",
+      "50",
+      "51",
+      "53",
+      "55",
+      "78",
+      "84",
+      "111",
+      "150",
+      "175",
+      "241",
+      "259",
+      "289",
+      "322",
+      "337",
+      "338",
+      "339",
+      "340",
+      "345",
+      "346",
+      "347",
+      "349",
+      "350",
+      "353",
+      "355",
+      "370",
+      "437",
+      "526",
+      "803",
+      "859",
+      "864",
+      "869",
+      "870",
+      "871",
+      "1044"
+    ],
+    "sources": [
+      {
+        "matiere_ou_categorie": "__theme__",
+        "section": "Exonérations",
+        "nombre_articles": 7
+      },
+      {
+        "matiere_ou_categorie": "__transversal__",
+        "section": "Déductions",
+        "nombre_articles": 49
+      }
+    ]
+  },
+  {
+    "acte": "Faire face aux conséquences (sanctions, recouvrement, contentieux)",
+    "description": "Sanctions, poursuites, contestation",
+    "nombre_articles_total": 108,
+    "articles": [
+      "693",
+      "694",
+      "695",
+      "696",
+      "697",
+      "699",
+      "700",
+      "701",
+      "704",
+      "705",
+      "706",
+      "707",
+      "708",
+      "709",
+      "710",
+      "711",
+      "712",
+      "713",
+      "714",
+      "715",
+      "716",
+      "717",
+      "718",
+      "719",
+      "720",
+      "721",
+      "722",
+      "723",
+      "724",
+      "725",
+      "726",
+      "727",
+      "728",
+      "729",
+      "730",
+      "731",
+      "732",
+      "733",
+      "734",
+      "735",
+      "736",
+      "737",
+      "738",
+      "739",
+      "740",
+      "741",
+      "742",
+      "743",
+      "744",
+      "745",
+      "746",
+      "747",
+      "748",
+      "749",
+      "750",
+      "751",
+      "752",
+      "753",
+      "754",
+      "755",
+      "756",
+      "757",
+      "758",
+      "759",
+      "760",
+      "761",
+      "762",
+      "763",
+      "764",
+      "765",
+      "766",
+      "767",
+      "768",
+      "769",
+      "770",
+      "771",
+      "772",
+      "809",
+      "810",
+      "811",
+      "812",
+      "813",
+      "814",
+      "815",
+      "816",
+      "817",
+      "818",
+      "819",
+      "820",
+      "821",
+      "822",
+      "823",
+      "824",
+      "825",
+      "826",
+      "827",
+      "828",
+      "829",
+      "830",
+      "831",
+      "832",
+      "833",
+      "834",
+      "835",
+      "836",
+      "837",
+      "838",
+      "839"
+    ],
+    "sources": [
+      {
+        "matiere_ou_categorie": "Procédures - Sanctions",
+        "section": null,
+        "nombre_articles": 31
+      },
+      {
+        "matiere_ou_categorie": "Procédures - Recouvrement",
+        "section": null,
+        "nombre_articles": 69
+      },
+      {
+        "matiere_ou_categorie": "Procédures - Contentieux",
+        "section": null,
+        "nombre_articles": 8
+      }
+    ]
+  }
+]
