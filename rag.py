@@ -224,6 +224,40 @@ def recherche_hybride(db, query_embedding, question, top_k=TOP_K_VECTOR):
         ],
     }
 
+    # Matieres ciblees : meme principe que THEMES_CIBLES, mais quand l'article
+    # definisseur n'a pas de theme_principal (souvent le cas pour les
+    # matieres transversales courtes comme "precompte"). Ajoute au fil des
+    # cas reels observes en production - ex. "precompte" confondu avec les
+    # articles d'"acompte", mot proche mais concept different.
+    MATIERES_CIBLES = {
+        "Autres prélèvements et retenues à la source": ["précompte"],
+    }
+
+    # Articles cibles : le bonus le plus precis possible, directement sur
+    # UN numero d'article. Necessaire quand le bonus par theme (ci-dessus)
+    # ne suffit pas a departager - cas reel observe : "regime du forfait"
+    # (NIF P) faisait remonter l'article 119 (regime reel simplifie) au
+    # lieu du 120 (le vrai regime du forfait), parce que 119 mentionne
+    # "regime du forfait" en passant (comme exception d'option), ce qui
+    # trompe la recherche par mots-cles. Un bonus direct sur l'article
+    # tranche sans ambiguite pour ces cas de confusion entre articles tres
+    # proches thematiquement.
+    BONUS_ARTICLE_CIBLE = 0.08  # plus fort que BONUS_THEME_CIBLE : la precision
+                                  # est maximale ici (un seul article vise, pas un theme entier)
+    ARTICLES_CIBLES = {
+        "118": ["régime réel normal d'imposition"],
+        "119": ["régime réel simplifié d'imposition"],
+        "120": ["régime du forfait"],
+        "94": ["précompte"],  # confusion frequente avec les articles d'"acompte" (cf. NIF P)
+        # Articles tres courts (une phrase), reconstruits lors du demelage
+        # de 394quinquies - texte trop pauvre pour bien ressortir seul en
+        # recherche vectorielle/mots-cles sans coup de pouce direct.
+        "394quaterdecies": ["taux de la taxe sur les paiements en numéraire"],
+        "394sexies": ["taux de la taxe sur les dépôts", "taux de la taxe sur les dépôts et transferts d'argent"],
+        "394decies": ["qu'est-ce que la taxe sur les paiements en numéraire", "assujettis à la taxe sur les paiements en numéraire"],
+        "394nonies": ["collecter la taxe sur les dépôts", "qui doit collecter la taxe sur les dépôts et transferts d'argent"],
+    }
+
     question_elargie = elargir_question(question)
     matiere_detectee = detecter_matiere_dans_question(question)
 
@@ -231,6 +265,18 @@ def recherche_hybride(db, query_embedding, question, top_k=TOP_K_VECTOR):
     for theme, termes_declencheurs in THEMES_CIBLES.items():
         if any(t in question_elargie.lower() for t in termes_declencheurs):
             theme_cible = theme
+            break
+
+    matiere_cible = None
+    for matiere, termes_declencheurs in MATIERES_CIBLES.items():
+        if any(t in question_elargie.lower() for t in termes_declencheurs):
+            matiere_cible = matiere
+            break
+
+    article_cible = None
+    for article_id, termes_declencheurs in ARTICLES_CIBLES.items():
+        if any(t in question_elargie.lower() for t in termes_declencheurs):
+            article_cible = article_id
             break
 
     resultats_vecteur = search_pivot_articles(db, query_embedding, top_k=top_k * 2)
@@ -252,12 +298,45 @@ def recherche_hybride(db, query_embedding, question, top_k=TOP_K_VECTOR):
             if a.matiere_fiscale == matiere_detectee:
                 scores[article_id] = scores.get(article_id, 0.0) + BONUS_MATIERE_FISCALE
 
+    if article_cible and article_cible not in articles_par_id:
+        # Filet de securite : si l'article vise avec certitude n'est meme
+        # pas remonte par la recherche initiale (vectorielle + mots-cles),
+        # on va le chercher directement plutot que de perdre le benefice
+        # du bonus - garantit que le bonus a toujours un effet reel.
+        # IMPORTANT : cette injection doit avoir lieu AVANT le calcul du
+        # bonus de theme ci-dessous, sinon l'article injecte n'en beneficie
+        # jamais (bug reel observe : NIF P injectait le 120 mais APRES le
+        # bonus de theme, qui avait deja profite au 119 present depuis le
+        # debut - resultat, 119 gagnait quand meme malgre le bonus article).
+        cur = db.cursor()
+        cur.execute(
+            "SELECT text, livre_titre, chapitre_titre, section_titre FROM cgi_articles WHERE article_id = %s",
+            (article_cible,),
+        )
+        row = cur.fetchone()
+        if row:
+            articles_par_id[article_cible] = RetrievedArticle(
+                article_id=article_cible, text=row["text"],
+                livre_titre=row["livre_titre"], chapitre_titre=row["chapitre_titre"],
+                section_titre=row["section_titre"], role="pivot",
+                matiere_fiscale=_METADONNEES_PAR_ARTICLE.get(article_cible, {}).get("matiere_fiscale", ""),
+            )
+            scores[article_cible] = 0.0
+
     if theme_cible:
         for article_id in articles_par_id:
             meta = _METADONNEES_PAR_ARTICLE.get(article_id, {})
             theme_article = (meta.get("themes") or {}).get("principal")
             if theme_article == theme_cible:
                 scores[article_id] = scores.get(article_id, 0.0) + BONUS_THEME_CIBLE
+
+    if matiere_cible:
+        for article_id, a in articles_par_id.items():
+            if a.matiere_fiscale == matiere_cible:
+                scores[article_id] = scores.get(article_id, 0.0) + BONUS_THEME_CIBLE
+
+    if article_cible and article_cible in articles_par_id:
+        scores[article_cible] = scores.get(article_cible, 0.0) + BONUS_ARTICLE_CIBLE
 
     classement = sorted(scores.items(), key=lambda x: -x[1])[:top_k]
     resultat = []
