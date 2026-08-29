@@ -982,7 +982,7 @@ def repondre_rag(question_brute, db, historique=None):
     }
 
 
-def repondre(question_brute, historique=None, db=None):
+def _repondre_interne(question_brute, historique=None, db=None):
     """Ordre de priorite ACTUEL (temporaire, voir tete de fichier) :
     Gemini (File Search) -> moteur local, SI ce dernier est actif.
 
@@ -1043,4 +1043,69 @@ def repondre(question_brute, historique=None, db=None):
         "question_comprise": question_brute,
         "moteur": "indisponible",
     }
+
+
+def _extraire_articles_de_source(source_text):
+    """Extrait la liste des numeros d'articles a partir du champ "source"
+    d'un resultat (ex. "...— articles 774, 118 du CGI 2026" -> ['774','118']).
+    Evite d'avoir a modifier individuellement chaque bloc de retour du
+    fichier pour leur faire porter un champ articles_utilises separe -
+    le champ source contient deja cette info dans la plupart des cas."""
+    if not source_text:
+        return []
+    m = re.search(r"articles?\s+([\d\w,\s']+?)(?:\s+du\s+CGI|\s*\(|\s*$)", source_text, re.IGNORECASE)
+    if not m:
+        return []
+    return [a.strip() for a in m.group(1).split(",") if a.strip()]
+
+
+def enregistrer_conversation(db, question_brute, resultat, duree_secondes):
+    """Enregistre chaque question/reponse REELLE dans journal_conversations,
+    pour un futur LLM Judge par lots (tous les ~3000 questions, plutot
+    qu'un Golden Dataset redige a la main - voir PLAN_QUOTA_ULTERIEURE).
+    Echoue TOUJOURS silencieusement (juste un message dans les logs) si
+    la table n'existe pas encore ou si 'db' est indisponible - ne doit
+    JAMAIS empecher une reponse d'arriver a l'utilisateur, la
+    journalisation est un a-cote, jamais sur le chemin critique."""
+    if db is None or resultat is None:
+        return
+    try:
+        import json as _json
+        articles = _extraire_articles_de_source(resultat.get("source"))
+        suspects = resultat.get("suspects")
+        cur = db.cursor()
+        cur.execute(
+            """
+            INSERT INTO journal_conversations
+                (question_brute, reponse, moteur, niveau, articles_utilises, verified, suspects, duree_secondes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                question_brute,
+                resultat.get("reponse"),
+                resultat.get("moteur"),
+                resultat.get("niveau"),
+                _json.dumps(articles) if articles else None,
+                resultat.get("verified"),
+                _json.dumps(suspects) if suspects else None,
+                duree_secondes,
+            ),
+        )
+        db.commit()
+    except Exception as e:
+        print(f"[Fisca AI][Journal] Enregistrement échoué (n'affecte pas la réponse) : {type(e).__name__}: {e}")
+
+
+def repondre(question_brute, historique=None, db=None):
+    """Point d'entree public - enveloppe _repondre_interne (qui contient
+    toute la vraie logique de cascade entre moteurs, inchangee) pour y
+    ajouter la journalisation systematique de chaque question/reponse
+    reelle, sans jamais risquer d'affecter la reponse elle-meme si la
+    journalisation echoue pour une raison quelconque."""
+    debut_total = time.time()
+    resultat = _repondre_interne(question_brute, historique, db)
+    duree = time.time() - debut_total
+    enregistrer_conversation(db, question_brute, resultat, duree)
+    return resultat
+
 
