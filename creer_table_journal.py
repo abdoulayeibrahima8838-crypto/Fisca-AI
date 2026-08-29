@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS journal_conversations (
 
     -- Reserve pour le LLM Judge par lots (rempli plus tard, jamais a la volee)
     juge BOOLEAN DEFAULT FALSE,
+    date_jugement TIMESTAMP,
     score_judge INTEGER,
     judge_details TEXT        -- JSON : detail complet du jugement (fiscal_accuracy,
                                -- faithfulness, hallucination, etc. - meme structure
