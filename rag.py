@@ -583,10 +583,32 @@ def detecter_procedure_dans_question(question):
 def detecter_matiere_dans_question(question):
     """Cherche si le nom d'une matière fiscale connue (Phase 1/5) apparaît
     dans la question - condition necessaire (mais pas suffisante seule)
-    pour proposer une fiche plutot que la recherche standard."""
+    pour proposer une fiche plutot que la recherche standard.
+
+    Le filtre "mots de plus de 3 lettres" (pour ignorer des mots de
+    liaison comme "sur"/"les"/"des") excluait a tort les sigles COURTS
+    ecrits en MAJUSCULES dans le nom de la matiere elle-meme (ex. "TVA"
+    dans "TVA - Champ d'application") - resultat, ce sigle etant le seul
+    mot vraiment distinctif, la matiere entiere devenait indetectable
+    via une question normale ("Quel est le taux de la TVA ?"), meme si
+    elle contenait bien "TVA". Corrige : un mot ecrit en MAJUSCULES dans
+    le nom d'origine (avant mise en minuscules) est toujours conserve,
+    quelle que soit sa longueur - un sigle porte plus de sens qu'un mot
+    de liaison, peu importe sa taille."""
     question_lower = question.lower()
     for matiere in _FICHES_PAR_MATIERE:
-        mots_matiere = [m for m in matiere.lower().split() if len(m) > 3]
+        mots_sigles = [m.lower() for m in matiere.split() if m.isupper() and len(m) >= 2]
+        if mots_sigles:
+            # Un sigle en majuscules existe dans le nom de la matiere (ex.
+            # "TVA" dans "TVA - Champ d'application") : c'est LE critere,
+            # suffisant a lui seul - les autres mots ("Champ",
+            # "d'application") sont des qualificatifs structurels
+            # generiques qu'une vraie question ne contiendra jamais.
+            if all(m in question_lower for m in mots_sigles):
+                return matiere
+            continue
+
+        mots_matiere = [m.lower() for m in matiere.split() if len(m) > 3]
         if mots_matiere and all(m in question_lower for m in mots_matiere):
             return matiere
     return None
