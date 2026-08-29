@@ -1,38 +1,46 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-fisca_ai_test_engine.py — FISCA AI TEST ENGINE (version gratuite, sans
-LLM Judge). Remplace executer_tests.py avec une vraie architecture
-d'evaluation, inspiree du document de conception du systeme de test
-interne, mais limitee aux composants qui NE COUTENT AUCUN QUOTA GEMINI.
+fisca_ai_test_engine.py — FISCA AI TEST ENGINE (version gratuite, sans LLM
+Judge). Remplace executer_tests.py avec une vraie architecture d'evaluation,
+inspiree du document de conception du systeme de test interne, mais limitee
+aux composants qui NE COUTENT AUCUN QUOTA GEMINI.
 
 CE QUI EST FAIT ICI (gratuit - embeddings uniquement, 1000/jour) :
-  - Test Orchestrator (file de tests, execution, capture des resultats)
-  - RAG Evaluator : Recall@1, Recall@3, Recall@5, Recall@10, MRR
-  - Controles deterministes : verification programmatique des taux/
-    montants/delais attendus dans le texte de l'article retrouve
-  - Classification des erreurs (RETRIEVAL_ERROR, RANKING_ERROR, etc.)
-  - Critical Fail : un echec sur une question marquee "critical" est
-    signale separement, independamment du score global
-  - Suivi de version + Regression Engine : chaque execution est
-    sauvegardee dans un historique JSON, comparee a la precedente
-  - Rapport final automatique, au format du document de conception
+- Test Orchestrator (file de tests, execution, capture des resultats)
+- RAG Evaluator : Recall@1, Recall@3, Recall@5, Recall@10, MRR
+- Controles deterministes : verification programmatique des taux/
+  montants/delais attendus dans le texte de l'article retrouve
+- Classification des erreurs (RETRIEVAL_ERROR, RANKING_ERROR, etc.)
+- Critical Fail : un echec sur une question marquee "critical" est
+  signale separement, independamment du score global
+- Suivi de version + Regression Engine : chaque execution est
+  sauvegardee dans un historique JSON, comparee a la precedente
+- Rapport final automatique, au format du document de conception
+- REPRISE DE CAMPAGNE : chaque resultat est sauvegarde question par
+  question dans un fichier de progression. Une nouvelle execution
+  saute automatiquement les questions deja marquees PASS (a moins de
+  forcer un test complet), et reprend exactement ou elle s'etait
+  arretee en cas de quota journalier epuise en cours de route.
 
 CE QUI EST VOLONTAIREMENT ABSENT ICI (coute du quota Gemini - a ajouter
 apres le paiement, voir le fichier PHASE_QUOTA_ULTERIEURE.md) :
-  - LLM-as-a-Judge (evaluation semantique de la REDACTION finale, pas
-    seulement de la recherche) - necessite un appel Gemini par question
-  - Generation automatique de variantes de questions (4 par question x
-    200 = 800 questions supplementaires) - necessite un appel Gemini
-    par variante generee
-  - Test de coherence semantique entre variantes (necessite les
-    variantes ci-dessus, donc indirectement du quota)
-  - Test de stabilite (memes questions x5 executions) - techniquement
-    gratuit en recherche pure, mais n'a de sens que combine au Judge
-    pour evaluer la redaction, pas juste la recherche
+- LLM-as-a-Judge (evaluation semantique de la REDACTION finale, pas
+  seulement de la recherche) - necessite un appel Gemini par question
+- Generation automatique de variantes de questions (4 par question x
+  200 = 800 questions supplementaires) - necessite un appel Gemini par
+  variante generee
+- Test de coherence semantique entre variantes (necessite les
+  variantes ci-dessus, donc indirectement du quota)
+- Test de stabilite (memes questions x5 executions) - techniquement
+  gratuit en recherche pure, mais n'a de sens que combine au Judge
+  pour evaluer la redaction, pas juste la recherche
 
 Usage, depuis le Shell Render :
     python fisca_ai_test_engine.py [--version "1.0"]
+
+    # Retester TOUTES les questions, y compris celles deja validees (PASS) :
+    python fisca_ai_test_engine.py --refaire-tout
 """
 import argparse
 import json
@@ -55,6 +63,7 @@ from vocabulaire import elargir_question
 
 FICHIER_BANQUE = "banque_200_questions.json"
 FICHIER_HISTORIQUE = "test_runs_history.json"
+FICHIER_PROGRESSION = "progression_campagne.json"
 
 # ---------------------------------------------------------------------------
 # Classification des erreurs (§20 du document de conception) - limitee aux
@@ -77,10 +86,28 @@ FAUX_POSITIF_HORS_SUJET = "FAUX_POSITIF_HORS_SUJET"  # score trop confiant sur u
 # que Gemini refuserait de repondre, juste que rien ne matche fortement.
 SEUIL_SCORE_HORS_SUJET = 0.025
 
+# Marqueurs textuels distinguant un quota JOURNALIER epuise (reessayer ne
+# sert a rien avant demain) d'une simple limite de DEBIT transitoire
+# (quelques secondes/minute, un reessai suffit). Sans cette distinction, le
+# script gaspillait du temps a reessayer indefiniment un quota deja mort
+# pour la journee.
+MARQUEURS_QUOTA_JOURNALIER = [
+    "requests per day", "per day", "generaterequestsperdaypermodel",
+    "embeddingrequestsperdaypermodel", "limit: 1000",
+]
+
+
+class QuotaJournalierEpuise(Exception):
+    """Levee quand le message d'erreur Gemini indique clairement un quota
+    JOURNALIER epuise (pas juste une limite de debit transitoire). Dans ce
+    cas, reessayer ne sert a rien avant la regeneration du quota
+    (generalement le lendemain) - inutile de perdre du temps en retries."""
+    pass
+
 
 def calculer_reciprocal_rank(ids_trouves, ids_attendus):
-    """Position du premier resultat correct (1-indexe), 0 si absent -
-    utilise pour le MRR (Mean Reciprocal Rank, §13)."""
+    """Position du premier resultat correct (1-indexe), 0 si absent - utilise
+    pour le MRR (Mean Reciprocal Rank, §13)."""
     for rang, article_id in enumerate(ids_trouves, start=1):
         if article_id in ids_attendus:
             return 1.0 / rang
@@ -89,9 +116,9 @@ def calculer_reciprocal_rank(ids_trouves, ids_attendus):
 
 def verifier_valeurs_deterministes(expected_values, textes_articles_trouves):
     """Controle deterministe (§14/§16) : verifie que les taux/montants/
-    delais attendus apparaissent bien dans le texte des articles
-    retrouves - sans utiliser de LLM, juste une recherche de sous-chaine.
-    Retourne (ok: bool, valeurs_manquantes: list)."""
+    delais attendus apparaissent bien dans le texte des articles retrouves -
+    sans utiliser de LLM, juste une recherche de sous-chaine. Retourne
+    (ok: bool, valeurs_manquantes: list)."""
     if not any(expected_values.values()):
         return True, []  # rien a verifier pour cette question
 
@@ -106,13 +133,15 @@ def verifier_valeurs_deterministes(expected_values, textes_articles_trouves):
 
 def embed_question_avec_retry(client, question, max_tentatives=3, delai_base=2):
     """Enveloppe embed_question avec une nouvelle tentative automatique en
-    cas d'erreur transitoire (429 quota depasse, 503 surcharge) - le meme
+    cas d'erreur transitoire (429 debit depasse, 503 surcharge) - le meme
     genre d'erreur que Fisca AI rencontre parfois en production, mais ici
-    sur un enchainement de 200+ appels rapproches, le risque est plus
-    eleve de tomber sur une limite de debit temporaire (pas la limite
-    quotidienne, une limite par minute/seconde). Sans cette protection,
-    UNE SEULE erreur transitoire fait echouer le test, alors qu'un simple
-    reessai aurait suffi."""
+    sur un enchainement de 200+ appels rapproches, le risque est plus eleve
+    de tomber sur une limite de debit temporaire (pas la limite quotidienne,
+    une limite par minute/seconde).
+
+    Si le message indique au contraire un quota JOURNALIER epuise, on leve
+    immediatement QuotaJournalierEpuise sans perdre de temps en retries -
+    aucun reessai ne peut aider avant demain."""
     derniere_erreur = None
     for tentative in range(1, max_tentatives + 1):
         try:
@@ -120,6 +149,13 @@ def embed_question_avec_retry(client, question, max_tentatives=3, delai_base=2):
         except Exception as e:
             derniere_erreur = e
             message = str(e).lower()
+
+            est_quota_journalier = "resource_exhausted" in message and any(
+                marqueur in message for marqueur in MARQUEURS_QUOTA_JOURNALIER
+            )
+            if est_quota_journalier:
+                raise QuotaJournalierEpuise(str(e)) from e
+
             est_transitoire = "429" in message or "503" in message or "unavailable" in message or "resource_exhausted" in message
             if not est_transitoire or tentative == max_tentatives:
                 raise
@@ -130,8 +166,8 @@ def embed_question_avec_retry(client, question, max_tentatives=3, delai_base=2):
 
 
 def executer_test_hors_perimetre(test, client, conn):
-    """Test heuristique (SANS LLM Judge) pour les questions hors-perimetre
-    et articles inexistants (§7.6/§7.10 du document de conception) : verifie
+    """Test heuristique (SANS LLM Judge) pour les questions hors-perimetre et
+    articles inexistants (§7.6/§7.10 du document de conception) : verifie
     que le MEILLEUR score trouve reste bas, signe qu'aucune vraie
     correspondance n'existe. Ne verifie PAS que Gemini refuserait
     effectivement de repondre (ca, seul le LLM Judge peut le confirmer) -
@@ -157,6 +193,8 @@ def executer_test_hors_perimetre(test, client, conn):
             resultat[cle] = 1 if resultat["statut"] == "PASS" else 0
         resultat["mrr"] = 1.0 if resultat["statut"] == "PASS" else 0.0
         resultat["controle_deterministe_ok"] = True
+    except QuotaJournalierEpuise:
+        raise
     except Exception as e:
         resultat["erreurs"].append(NO_RESULT)
         resultat["statut"] = "FAIL"
@@ -211,6 +249,8 @@ def executer_test_recherche(test, client, conn):
         else:
             resultat["statut"] = "PASS"
 
+    except QuotaJournalierEpuise:
+        raise
     except Exception as e:
         resultat["erreurs"].append(NO_RESULT)
         resultat["statut"] = "FAIL"
@@ -244,11 +284,11 @@ def executer_test_vocabulaire(test):
 
 
 def executer_test_routage(test):
-    """Verifie qu'AU MOINS UN des 3 chemins de routage (acte, procedure,
-    ou fiche par impot) se declenche - le bug initial ne verifiait que
+    """Verifie qu'AU MOINS UN des 3 chemins de routage (acte, procedure, ou
+    fiche par impot) se declenche - le bug initial ne verifiait que
     acte/procedure, jamais la fiche par impot (matiere fiscale), ce qui
-    faisait a tort echouer des questions comme "Explique-moi toute la
-    taxe professionnelle" qui passent par ce 3eme chemin."""
+    faisait a tort echouer des questions comme "Explique-moi toute la taxe
+    professionnelle" qui passent par ce 3eme chemin."""
     resultat = {"id": test["id"], "categorie": test["categorie"], "critical": test.get("critical", False), "erreurs": []}
     acte = detecter_acte_dans_question(test["question"])
     procedure = detecter_procedure_dans_question(test["question"])
@@ -298,9 +338,33 @@ def comparer_a_execution_precedente(historique, resume_actuel):
     return regressions
 
 
+def charger_progression():
+    """Charge le fichier de progression de la campagne (resultat complet de
+    chaque question deja testee, index par id). Fichier vide/absent = toute
+    premiere execution, rien a sauter."""
+    if os.path.exists(FICHIER_PROGRESSION):
+        with open(FICHIER_PROGRESSION, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def sauvegarder_progression(progression):
+    """Ecriture COMPLETE du fichier de progression, appelee apres CHAQUE
+    question testee (pas seulement a la fin) - c'est ce qui permet de
+    reprendre exactement ou on s'est arrete si le quota s'epuise en cours de
+    route, sans jamais perdre de resultats deja obtenus."""
+    with open(FICHIER_PROGRESSION, "w", encoding="utf-8") as f:
+        json.dump(progression, f, ensure_ascii=False, indent=2)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", default=datetime.now().strftime("%Y%m%d-%H%M"))
+    parser.add_argument(
+        "--refaire-tout", action="store_true",
+        help="Reteste TOUTES les questions, y compris celles deja validees (PASS). "
+             "Par defaut, seules les questions jamais testees ou en FAIL/A ANALYSER sont relancees."
+    )
     args = parser.parse_args()
 
     DATABASE_URL = os.environ["DATABASE_URL"]
@@ -309,6 +373,8 @@ def main():
 
     with open(FICHIER_BANQUE, encoding="utf-8") as f:
         tests = json.load(f)
+
+    progression = charger_progression()
 
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
@@ -319,28 +385,59 @@ def main():
                               # cascade les questions suivantes qui n'ont rien a voir.
 
     print(f"=== FISCA AI TEST ENGINE — version {args.version} ===")
-    print(f"=== {len(tests)} tests à exécuter (recherche uniquement, aucun coût de génération) ===\n")
+    print(f"=== {len(tests)} question(s) dans la banque ===")
+
+    deja_pass = sum(1 for r in progression.values() if r.get("statut") == "PASS")
+    if args.refaire_tout:
+        print("=== --refaire-tout activé : aucune question ne sera sautée ===\n")
+    elif deja_pass:
+        print(f"=== Reprise de campagne : {deja_pass} question(s) déjà validées (PASS) seront sautées ===")
+        print("=== (les FAIL / À ANALYSER / jamais testées seront (re)testées) ===\n")
+    else:
+        print("=== Première exécution : aucune progression antérieure trouvée ===\n")
 
     resultats = []
+    nb_sautees = 0
+    quota_epuise = False
+
     for test in tests:
+        tid = test["id"]
         cat = test["categorie"]
         note = test.get("note") or ""
 
-        if test["articles_attendus"] is None and "vocabulaire.py" in note:
-            r = executer_test_vocabulaire(test)
-        elif cat == "piège_large":
-            r = executer_test_routage(test)
-        elif cat in ("piège_hors_perimetre", "piège_article_inexistant"):
-            r = executer_test_hors_perimetre(test, client, conn)
-        elif test["articles_attendus"] is None:
-            continue  # informationnel seul, pas de metrique
-        else:
-            r = executer_test_recherche(test, client, conn)
-            time.sleep(0.3)  # petit delai pour eviter de saturer une eventuelle
-                               # limite de debit par minute (distincte du quota
-                               # journalier) sur 200+ appels rapproches
+        deja_resultat = progression.get(tid)
+        if deja_resultat and deja_resultat.get("statut") == "PASS" and not args.refaire_tout:
+            resultats.append(deja_resultat)
+            nb_sautees += 1
+            continue
+
+        try:
+            if test["articles_attendus"] is None and "vocabulaire.py" in note:
+                r = executer_test_vocabulaire(test)
+            elif cat == "piège_large":
+                r = executer_test_routage(test)
+            elif cat in ("piège_hors_perimetre", "piège_article_inexistant"):
+                r = executer_test_hors_perimetre(test, client, conn)
+            elif test["articles_attendus"] is None:
+                continue  # informationnel seul, pas de metrique
+            else:
+                r = executer_test_recherche(test, client, conn)
+                time.sleep(0.3)  # petit delai pour eviter de saturer une eventuelle
+                                   # limite de debit par minute (distincte du quota
+                                   # journalier) sur 200+ appels rapproches
+        except QuotaJournalierEpuise as e:
+            print(f"\n🛑 QUOTA JOURNALIER D'EMBEDDINGS ÉPUISÉ à la question [{tid}].")
+            print(f"   {len(resultats)} question(s) comptabilisées dans ce rapport ({nb_sautees} sautées car déjà PASS).")
+            print("   La progression est sauvegardée sur disque — relance la même commande demain,")
+            print("   elle reprendra exactement ici, sans retester ce qui est déjà acquis.")
+            print(f"   Détail : {e}\n")
+            quota_epuise = True
+            break
 
         resultats.append(r)
+        progression[tid] = r
+        sauvegarder_progression(progression)  # ecriture immediate, question par question
+
         marqueur = "🔴 CRITICAL" if (r["statut"] == "FAIL" and r["critical"]) else ("✅" if r["statut"] == "PASS" else "⚠️" if r["statut"] == "À ANALYSER" else "❌")
         detail_erreur = f" — {r['exception']}" if r.get("exception") else (f" — {', '.join(r['erreurs'])}" if r["erreurs"] else "")
         if r["statut"] != "PASS" and r.get("articles_trouves"):
@@ -350,7 +447,8 @@ def main():
 
     conn.close()
 
-    # --- Agregation des scores ---
+    # --- Agregation des scores (sur l'ensemble des resultats connus,
+    #     sautees comprises, pour donner une photo complete de la campagne) ---
     par_categorie = defaultdict(lambda: {"pass": 0, "fail": 0, "analyse": 0, "total": 0})
     critical_fails = []
     for r in resultats:
@@ -386,39 +484,65 @@ def main():
         "par_categorie": {cat: dict(c) for cat, c in par_categorie.items()},
     }
 
-    # --- Regression Engine (§34) ---
-    historique = charger_historique()
-    regressions = comparer_a_execution_precedente(historique, resume)
-    sauvegarder_execution(historique, resume, args.version)
+    # --- Questions jamais atteintes cette campagne (utile si quota epuise
+    #     avant la fin, ou si de nouvelles questions viennent d'etre ajoutees
+    #     a la banque vers 500 et n'ont pas encore ete testees) ---
+    ids_testables = {
+        t["id"] for t in tests
+        if t["articles_attendus"] is not None or "vocabulaire.py" in (t.get("note") or "")
+        or t["categorie"] in ("piège_large", "piège_hors_perimetre", "piège_article_inexistant")
+    }
+    ids_couverts = {r["id"] for r in resultats}
+    ids_jamais_testees = sorted(ids_testables - ids_couverts)
+
+    # --- Regression Engine (§34) - seulement si campagne complete, une
+    #     execution partielle (quota epuise) ne doit pas fausser l'historique
+    #     de regression avec un sous-ensemble incomplet ---
+    if not quota_epuise:
+        historique = charger_historique()
+        regressions = comparer_a_execution_precedente(historique, resume)
+        sauvegarder_execution(historique, resume, args.version)
+    else:
+        historique = charger_historique()
+        regressions = None
 
     # --- Rapport final (§48) ---
     print("\n" + "=" * 60)
     print("FISCA AI INTERNAL EVALUATION")
     print(f"VERSION: {args.version}")
+    if quota_epuise:
+        print("STATUT: EXÉCUTION PARTIELLE (quota journalier épuisé en cours de route)")
     print("=" * 60)
-    print(f"\nTests exécutés          : {total_tests}")
-    print(f"Success Rate            : {resume['success_rate']*100:.1f}%")
-    print(f"Critical Fail           : {resume['critical_fails']}")
-    print(f"Recall@1                : {resume['recall_1']*100:.1f}%")
-    print(f"Recall@3                : {resume['recall_3']*100:.1f}%")
-    print(f"Recall@5                : {resume['recall_5']*100:.1f}%")
-    print(f"MRR                     : {resume['mrr']:.3f}")
+    print(f"\nTests comptabilisés : {total_tests} (dont {nb_sautees} sautées car déjà validées)")
+    print(f"Success Rate : {resume['success_rate']*100:.1f}%")
+    print(f"Critical Fail : {resume['critical_fails']}")
+    print(f"Recall@1 : {resume['recall_1']*100:.1f}%")
+    print(f"Recall@3 : {resume['recall_3']*100:.1f}%")
+    print(f"Recall@5 : {resume['recall_5']*100:.1f}%")
+    print(f"MRR : {resume['mrr']:.3f}")
 
     print("\nPerformance par catégorie :")
     for cat, c in sorted(par_categorie.items(), key=lambda x: -x[1]["total"]):
-        print(f"  {cat:25s} : {c['taux_reussite']*100:5.1f}%  ({c['pass']}/{c['total']})")
+        print(f"  {cat:25s} : {c['taux_reussite']*100:5.1f}% ({c['pass']}/{c['total']})")
 
     if critical_fails:
         print(f"\n🔴 CRITICAL FAILS À EXAMINER EN PRIORITÉ : {', '.join(critical_fails)}")
 
+    if ids_jamais_testees:
+        print(f"\n⏳ {len(ids_jamais_testees)} question(s) jamais testées cette campagne (relance la commande pour les couvrir) :")
+        print(f"   {', '.join(ids_jamais_testees[:30])}" + (" ..." if len(ids_jamais_testees) > 30 else ""))
+
     if regressions:
-        print(f"\n⚠️  RÉGRESSIONS DÉTECTÉES depuis la dernière exécution ({historique[-2]['version'] if len(historique) > 1 else '?'}) :")
+        print(f"\n⚠️ RÉGRESSIONS DÉTECTÉES depuis la dernière exécution complète ({historique[-2]['version'] if len(historique) > 1 else '?'}) :")
         for cat, avant, apres in regressions:
             print(f"  {cat:25s} : {avant*100:.1f}% → {apres*100:.1f}% (baisse de {(avant-apres)*100:.1f} points)")
-    elif len(historique) > 1:
+    elif not quota_epuise and len(historique) > 1:
         print("\n✅ Aucune régression détectée depuis la dernière exécution.")
 
-    print("\nRECOMMANDATION :", "PASS" if resume["critical_fails"] == 0 and resume["success_rate"] >= 0.85 else "À EXAMINER AVANT DÉPLOIEMENT")
+    if not quota_epuise:
+        print("\nRECOMMANDATION :", "PASS" if resume["critical_fails"] == 0 and resume["success_rate"] >= 0.85 else "À EXAMINER AVANT DÉPLOIEMENT")
+    else:
+        print("\nRECOMMANDATION : relancer la commande pour compléter la campagne avant de conclure quoi que ce soit.")
 
 
 if __name__ == "__main__":
