@@ -45,6 +45,7 @@ Usage, depuis le Shell Render :
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from collections import defaultdict
@@ -122,13 +123,29 @@ def verifier_valeurs_deterministes(expected_values, textes_articles_trouves):
     if not any(expected_values.values()):
         return True, []  # rien a verifier pour cette question
 
-    texte_complet = " ".join(textes_articles_trouves).lower()
+    texte_complet = normaliser_valeur(" ".join(textes_articles_trouves))
     manquantes = []
     for categorie, valeurs in expected_values.items():
         for valeur in valeurs:
-            if valeur.lower() not in texte_complet:
+            if normaliser_valeur(valeur) not in texte_complet:
                 manquantes.append(f"{categorie}:{valeur}")
     return len(manquantes) == 0, manquantes
+
+
+def normaliser_valeur(texte):
+    """Rend comparables les valeurs de la banque et le texte du CGI, qui
+    n'ecrivent pas les nombres de la meme facon :
+      - « 75 000 » ou « 75.000 » dans le CGI, « 75000 » dans la banque ;
+      - « deux (2) mois » dans le CGI, « 2 mois » dans la banque ;
+      - « un pour mille (1%0) » dans le CGI, « 1‰ » dans la banque ;
+      - « 30 % » ou « 30% ».
+    Sans cette normalisation, des valeurs bien presentes dans l'article
+    etaient signalees DETERMINISTIC_VALUE_MISSING a tort."""
+    t = str(texte).lower().replace("\u202f", " ").replace("\xa0", " ").replace("‰", "%0")
+    t = re.sub(r"(?<=\d)[ .](?=\d{3}\b)", "", t)
+    t = re.sub(r"[()]", "", t)
+    t = re.sub(r"\s+%", "%", t)
+    return re.sub(r"\s+", " ", t)
 
 
 def embed_question_avec_retry(client, question, max_tentatives=3, delai_base=2):
@@ -547,4 +564,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
