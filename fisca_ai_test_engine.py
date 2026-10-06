@@ -142,7 +142,7 @@ def normaliser_valeur(texte):
     Sans cette normalisation, des valeurs bien presentes dans l'article
     etaient signalees DETERMINISTIC_VALUE_MISSING a tort."""
     t = str(texte).lower().replace("\u202f", " ").replace("\xa0", " ").replace("‰", "%0")
-    t = re.sub(r"(?<=\d)[ .](?=\d{3}\b)", "", t)
+    t = re.sub(r"(?<=\d)[\s.](?=\d{3}\b)", "", t)  # espace, point ou retour a la ligne
     t = re.sub(r"[()]", "", t)
     t = re.sub(r"\s+%", "%", t)
     return re.sub(r"\s+", " ", t)
@@ -382,6 +382,15 @@ def main():
         help="Reteste TOUTES les questions, y compris celles deja validees (PASS). "
              "Par defaut, seules les questions jamais testees ou en FAIL/A ANALYSER sont relancees."
     )
+    parser.add_argument(
+        "--depuis", default="",
+        help="Ne teste que les questions a partir de cet identifiant (ex. T243), "
+             "par exemple pour ne tester que les nouvelles questions d'une banque enrichie."
+    )
+    parser.add_argument(
+        "--ids", default="",
+        help="Ne teste que ces questions, separees par des virgules (ex. T124,T129)."
+    )
     args = parser.parse_args()
 
     DATABASE_URL = os.environ["DATABASE_URL"]
@@ -390,6 +399,19 @@ def main():
 
     with open(FICHIER_BANQUE, encoding="utf-8") as f:
         tests = json.load(f)
+
+    def numero(tid):
+        chiffres = "".join(c for c in str(tid) if c.isdigit())
+        return int(chiffres) if chiffres else 0
+
+    if args.depuis:
+        seuil = numero(args.depuis)
+        tests = [t for t in tests if numero(t["id"]) >= seuil]
+        print(f"=== --depuis {args.depuis} : seules les questions à partir de {args.depuis} sont testées ===")
+    if args.ids:
+        choix = {x.strip().upper() for x in args.ids.split(",") if x.strip()}
+        tests = [t for t in tests if t["id"].upper() in choix]
+        print(f"=== --ids : {len(tests)} question(s) sélectionnée(s) ===")
 
     progression = charger_progression()
 
