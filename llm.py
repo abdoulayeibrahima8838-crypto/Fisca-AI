@@ -31,6 +31,19 @@ MODELE = os.environ.get("LLM_MODELE") or os.environ.get("GEMINI_MODEL", "gemini-
 
 TIMEOUT_DEFAUT_S = 35
 
+# Les modeles Gemini recents « reflechissent » avant d'ecrire, et ces jetons de
+# reflexion sont DECOMPTES du plafond max_output_tokens : avec un plafond de
+# 1500, la reflexion peut en consommer l'essentiel et la reponse visible est
+# coupee en pleine phrase. Cette marge est ajoutee au plafond demande par
+# l'appelant, pour que ce plafond s'applique bien au texte visible.
+MARGE_REFLEXION = int(os.environ.get("LLM_MARGE_REFLEXION", "4096"))
+
+CONSIGNE_REFORMULATION = (
+    "Reformule entierement avec tes propres mots : ne recopie pas de longs "
+    "passages des articles, cite seulement leur numero et les valeurs utiles "
+    "(taux, delais, montants)."
+)
+
 # Doivent correspondre à la base existante (schema.sql, generer_embeddings.py)
 EMBEDDING_MODELE = "gemini-embedding-001"
 EMBEDDING_DIMENSIONS = 1536
@@ -115,6 +128,47 @@ def _outils_gemini(outils):
     return types.Tool(function_declarations=declarations)
 
 
+def _motif_arret(reponse):
+    try:
+        motif = reponse.candidates[0].finish_reason
+        return getattr(motif, "name", str(motif)) if motif is not None else ""
+    except (AttributeError, IndexError, TypeError):
+        return ""
+
+
+def _generer_gemini(contenus, config, modele, contexte):
+    """Appel Gemini commun a rediger() et rediger_avec_file_search() :
+    - ajoute la marge de reflexion au plafond de sortie ;
+    - journalise toute reponse interrompue (motif, jetons de reflexion) ;
+    - si Gemini coupe la reponse parce qu'elle recopie trop le texte source
+      (motif RECITATION), refait UNE tentative en demandant de reformuler."""
+    from google.genai import types
+    client = _exiger_gemini()
+    config = dict(config)
+    config["max_output_tokens"] = config.get("max_output_tokens", 1500) + MARGE_REFLEXION
+
+    for tentative in (1, 2):
+        reponse = client.models.generate_content(
+            model=modele or MODELE, contents=contenus, config=types.GenerateContentConfig(**config),
+        )
+        texte = getattr(reponse, "text", "") or ""
+        motif = _motif_arret(reponse)
+        if motif and motif not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
+            usage = getattr(reponse, "usage_metadata", None)
+            print(
+                f"[Fisca AI][LLM] Réponse interrompue ({contexte}, essai {tentative}) — motif={motif}, "
+                f"jetons réflexion={getattr(usage, 'thoughts_token_count', None)}, "
+                f"jetons texte={getattr(usage, 'candidates_token_count', None)}, "
+                f"taille={len(texte)} caractères."
+            )
+            if motif == "RECITATION" and tentative == 1:
+                systeme = config.get("system_instruction") or ""
+                config["system_instruction"] = (systeme + "\n\n" + CONSIGNE_REFORMULATION).strip()
+                continue
+        return texte
+    return texte
+
+
 # ===========================================================================
 # FONCTIONS PUBLIQUES
 # ===========================================================================
@@ -143,7 +197,6 @@ def rediger(prompt, *, systeme=None, historique=None, modele=None,
     décider du repli, comme avant."""
     if FOURNISSEUR == "gemini":
         from google.genai import types
-        client = _exiger_gemini()
         config = dict(
             max_output_tokens=max_output_tokens,
             http_options=types.HttpOptions(timeout=timeout_secondes * 1000),
@@ -152,12 +205,10 @@ def rediger(prompt, *, systeme=None, historique=None, modele=None,
             config["system_instruction"] = systeme
         if format_json:
             config["response_mime_type"] = "application/json"
-        reponse = client.models.generate_content(
-            model=modele or MODELE,
-            contents=_contenus_gemini(historique, prompt) if historique else prompt,
-            config=types.GenerateContentConfig(**config),
+        return _generer_gemini(
+            _contenus_gemini(historique, prompt) if historique else prompt,
+            config, modele, "rediger",
         )
-        return getattr(reponse, "text", "") or ""
     raise _non_pris_en_charge(FOURNISSEUR, "rediger")
 
 
@@ -169,7 +220,6 @@ def rediger_avec_file_search(question, *, store, systeme=None, historique=None, 
     sur le moteur suivant)."""
     if FOURNISSEUR == "gemini":
         from google.genai import types
-        client = _exiger_gemini()
         config = dict(
             max_output_tokens=max_output_tokens,
             http_options=types.HttpOptions(timeout=timeout_secondes * 1000),
@@ -177,12 +227,7 @@ def rediger_avec_file_search(question, *, store, systeme=None, historique=None, 
         )
         if systeme:
             config["system_instruction"] = systeme
-        reponse = client.models.generate_content(
-            model=modele or MODELE,
-            contents=_contenus_gemini(historique, question),
-            config=types.GenerateContentConfig(**config),
-        )
-        return getattr(reponse, "text", "") or ""
+        return _generer_gemini(_contenus_gemini(historique, question), config, modele, "file_search")
     raise _non_pris_en_charge(FOURNISSEUR, "rediger_avec_file_search")
 
 
@@ -272,7 +317,7 @@ class SessionOutils:
             config = types.GenerateContentConfig(
                 system_instruction=self.systeme,
                 temperature=self.temperature,
-                max_output_tokens=self.max_output_tokens,
+                max_output_tokens=self.max_output_tokens + MARGE_REFLEXION,
                 http_options=types.HttpOptions(timeout=self.timeout_secondes * 1000),
                 tools=[self._outils_natifs],
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
@@ -303,3 +348,4 @@ class SessionOutils:
             self._contenus.append(types.Content(role="user", parts=parties))
             return
         raise _non_pris_en_charge(FOURNISSEUR, "SessionOutils.ajouter_resultats")
+
