@@ -126,7 +126,7 @@ def main():
         print("ERREUR : aucun fournisseur d'IA disponible pour calculer les vecteurs. Arrêt.")
         sys.exit(1)
 
-    conn.autocommit = False
+    conn.rollback()  # clôt la transaction de lecture ouverte par le SELECT initial
     reussis, echecs = 0, []
 
     # 1) Titres seuls : aucune consommation de quota
