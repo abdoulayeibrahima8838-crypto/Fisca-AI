@@ -714,6 +714,14 @@ DOSSIER_VIRTUEL_ACTIVE = os.environ.get("DOSSIER_VIRTUEL_ACTIF", "0") == "1"
 # (un appel Gemini supplementaire) - desactive par defaut.
 MULTI_HOP_ACTIVE = os.environ.get("MULTI_HOP_ACTIF", "0") == "1"
 
+# Agent Fisca AI (agent.py) : recherche CGI 2026 + calculatrice + verificateur
+# de citations, pour les questions qui demandent un CALCUL (montants, taux,
+# penalites). COUTE PLUSIEURS APPELS GEMINI par question (jusqu'a 5) -
+# desactive par defaut. Passer AGENT_ACTIF a "1" sur Render pour l'activer.
+# En cas d'echec, de depassement de duree ou de quota, l'agent rend la main
+# et le RAG habituel repond a sa place : aucun risque pour l'utilisateur.
+AGENT_ACTIF = os.environ.get("AGENT_ACTIF", "0") == "1"
+
 
 def repondre_rag(question_brute, db, historique=None):
     """Tente une reponse via le RAG maison. Voir le commentaire d'archi-
@@ -982,6 +990,48 @@ def repondre_rag(question_brute, db, historique=None):
     }
 
 
+
+def repondre_agent(question_brute, db, historique=None):
+    """Tente une reponse via l'agent (agent.py). Retourne None - et laisse
+    donc le RAG habituel repondre - si l'agent est desactive, si la question
+    ne demande pas de calcul, ou en cas d'echec quelconque."""
+    if not _gemini_client or not AGENT_ACTIF or db is None:
+        return None
+    try:
+        from agent import FiscaAgent, doit_utiliser_agent
+        if not doit_utiliser_agent(question_brute):
+            return None
+        debut = time.time()
+        resultat = FiscaAgent(
+            _gemini_client, db, model=GEMINI_MODEL, consignes=SYSTEM_PROMPT,
+        ).repondre(question_brute, historique)
+    except Exception as e:
+        print(f"[Fisca AI][Agent] ÉCHEC ({type(e).__name__}: {e}) — repli sur le RAG habituel.")
+        return None
+    if resultat is None:
+        return None
+
+    articles = resultat["articles_cites"] or resultat["articles_consultes"]
+    print(
+        f"[Fisca AI][Agent] SUCCÈS — durée={time.time()-debut:.1f}s, "
+        f"appels={resultat['appels_modele']}, articles={articles}, "
+        f"calculs={len(resultat['calculs'])}, alertes={resultat['alertes'] or 'aucune'}."
+    )
+    return {
+        "niveau": 1,
+        "reponse": resultat["reponse"],
+        "source": (
+            f"Réponse de l'agent Fisca AI (recherche, calcul et vérification) — "
+            f"articles {', '.join(articles)} du CGI 2026"
+            if articles else "Réponse de l'agent Fisca AI — CGI 2026"
+        ),
+        "verified": not resultat["alertes"],
+        "question_comprise": question_brute,
+        "moteur": "agent",
+        "suspects": resultat["articles_non_consultes"] or None,
+    }
+
+
 def _repondre_interne(question_brute, historique=None, db=None):
     """Ordre de priorite ACTUEL (temporaire, voir tete de fichier) :
     Gemini (File Search) -> moteur local, SI ce dernier est actif.
@@ -1006,6 +1056,10 @@ def _repondre_interne(question_brute, historique=None, db=None):
     pour le RAG maison (voir repondre_rag). Sans elle, ou si RAG_ACTIF
     n'est pas active, ce premier etage est simplement saute."""
     if db is not None:
+        resultat = repondre_agent(question_brute, db, historique)
+        if resultat is not None:
+            return resultat
+
         resultat = repondre_rag(question_brute, db, historique)
         if resultat is not None:
             return resultat
@@ -1107,5 +1161,7 @@ def repondre(question_brute, historique=None, db=None):
     duree = time.time() - debut_total
     enregistrer_conversation(db, question_brute, resultat, duree)
     return resultat
+
+
 
 
