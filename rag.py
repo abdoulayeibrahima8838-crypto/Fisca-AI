@@ -44,6 +44,19 @@ MAX_EXPANSION_PER_ARTICLE = 2  # nb max de renvois ajoutés par article pivot
                                  # incluses en priorite malgre le plafond plus bas.
 SEUIL_POIDS_EXPANSION_NIVEAU1 = 0.80  # en dessous, un renvoi n'est ajoute qu'en dernier recours
 
+# Mode de la recherche par MOTS-CLES (search_keywords) :
+#   "et" (defaut, comportement historique) : un article n'est retenu que s'il
+#        contient TOUS les mots de la question elargie. Mesure du 06/10/2026 sur
+#        la banque de tests : aucun resultat pour 204 questions sur 218 - la
+#        moitie « mots-cles » de la recherche hybride etait de fait inactive.
+#   "ou" : un article est retenu s'il contient AU MOINS UN des mots, puis classe
+#        par pertinence (ts_rank) - plus il contient de mots de la question,
+#        mieux il est classe. Mesure (mots-cles seuls) : Recall@5 de 0 % a 58 %.
+# Reglable sans toucher au code : variable d'environnement MOTS_CLES_MODE.
+# Pour tester sans affecter l'application en ligne, depuis le Shell Render :
+#   MOTS_CLES_MODE=ou python fisca_ai_test_engine.py --refaire-tout
+MOTS_CLES_MODE = os.environ.get("MOTS_CLES_MODE", "et").strip().lower()
+
 
 # ---------------------------------------------------------------------------
 # Chargement des enrichissements Phase 1 (matière fiscale, valeurs, exceptions
@@ -162,17 +175,36 @@ def search_keywords(db, question, top_k=TOP_K_MOTS_CLES):
     fiscale') que la recherche vectorielle seule peut parfois diluer parmi
     des articles seulement 'proches par le sens'."""
     cur = db.cursor()
-    cur.execute(
-        """
-        SELECT article_id, text, livre_titre, chapitre_titre, section_titre,
-               ts_rank(to_tsvector('french', text), plainto_tsquery('french', %s)) AS rang
-        FROM cgi_articles
-        WHERE to_tsvector('french', text) @@ plainto_tsquery('french', %s)
-        ORDER BY rang DESC
-        LIMIT %s
-        """,
-        (question, question, top_k),
-    )
+    if MOTS_CLES_MODE == "ou":
+        # Meme analyse linguistique (configuration 'french'), mais les mots sont
+        # relies par OU au lieu de ET. Une question composee uniquement de mots
+        # vides donne une requete vide -> aucun resultat, sans erreur.
+        cur.execute(
+            """
+            WITH q AS (
+                SELECT NULLIF(replace(plainto_tsquery('french', %s)::text, '&', '|'), '')::tsquery AS tq
+            )
+            SELECT article_id, text, livre_titre, chapitre_titre, section_titre,
+                   ts_rank(to_tsvector('french', text), q.tq) AS rang
+            FROM cgi_articles, q
+            WHERE q.tq IS NOT NULL AND to_tsvector('french', text) @@ q.tq
+            ORDER BY rang DESC
+            LIMIT %s
+            """,
+            (question, top_k),
+        )
+    else:
+        cur.execute(
+            """
+            SELECT article_id, text, livre_titre, chapitre_titre, section_titre,
+                   ts_rank(to_tsvector('french', text), plainto_tsquery('french', %s)) AS rang
+            FROM cgi_articles
+            WHERE to_tsvector('french', text) @@ plainto_tsquery('french', %s)
+            ORDER BY rang DESC
+            LIMIT %s
+            """,
+            (question, question, top_k),
+        )
     rows = cur.fetchall()
     return [
         RetrievedArticle(
@@ -1044,4 +1076,6 @@ def answer_query(db, user_question, embed_fn, llm_fn):
         "sources": all_ids,
         "suspects": suspects,
     }
+
+
 
