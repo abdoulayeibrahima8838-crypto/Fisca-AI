@@ -802,18 +802,98 @@ def embed_question(gemini_client, texte_question):
     return llm.vectoriser_question(texte_question)
 
 
+# ---------------------------------------------------------------------------
+# Secours OpenAI via OpenRouter (generation seule, a partir du contexte deja
+# selectionne par notre RAG). Desactive par defaut : aucun effet tant que
+# OPENROUTER_FALLBACK_ACTIF n'est pas a "1" ET qu'une cle est presente.
+#   OPENROUTER_API_KEY         : la cle OpenRouter
+#   OPENROUTER_MODEL           : defaut "openai/gpt-4o-mini"
+#   OPENROUTER_FALLBACK_ACTIF  : "1" = si Gemini echoue, OpenRouter prend le relais
+#   OPENROUTER_PRIORITAIRE     : "1" = OpenRouter d'abord, Gemini en secours
+#                                (utile pour tester OpenRouter seul, ou si le
+#                                quota Gemini est epuise)
+# ---------------------------------------------------------------------------
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini").strip()
+OPENROUTER_FALLBACK_ACTIF = os.environ.get("OPENROUTER_FALLBACK_ACTIF", "0") == "1"
+OPENROUTER_PRIORITAIRE = os.environ.get("OPENROUTER_PRIORITAIRE", "0") == "1"
+OPENROUTER_TIMEOUT_SECONDS = int(os.environ.get("OPENROUTER_TIMEOUT_SECONDS", "25"))
+
+_client_openrouter = None
+
+
+def _get_client_openrouter():
+    global _client_openrouter
+    if _client_openrouter is None and OPENROUTER_API_KEY:
+        from openai import OpenAI
+        _client_openrouter = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=OPENROUTER_API_KEY,
+            default_headers={"HTTP-Referer": "https://fiscaai.com", "X-Title": "Fisca AI"},
+        )
+    return _client_openrouter
+
+
+def call_openrouter_llm(prompt, max_output_tokens=1500, timeout_secondes=None):
+    """Generation via OpenRouter (API Chat Completions compatible OpenAI).
+    Leve une exception en cas d'echec : l'appelant gere le repli, comme
+    il le faisait deja pour Gemini."""
+    client = _get_client_openrouter()
+    if client is None:
+        raise RuntimeError("OPENROUTER_API_KEY manquante")
+    r = client.chat.completions.create(
+        model=OPENROUTER_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=max_output_tokens,
+        temperature=0.2,
+        timeout=timeout_secondes or OPENROUTER_TIMEOUT_SECONDS,
+    )
+    return (r.choices[0].message.content or "") if r.choices else ""
+
+
 def call_gemini_llm(gemini_client, prompt, model=None, max_output_tokens=1500, timeout_secondes=35):
     """Generation finale a partir du contexte deja construit par notre propre
     recherche (search_pivot_articles + expand_via_refs).
 
-    Passe desormais par llm.py : le nom historique de la fonction est garde
-    pour ne rien casser, mais elle fonctionne avec le fournisseur configure
-    dans llm.py, quel qu'il soit. 'gemini_client' n'est plus utilise ;
-    model=None signifie « le modele par defaut de llm.py »."""
-    return llm.rediger(
-        prompt, modele=model,
-        max_output_tokens=max_output_tokens, timeout_secondes=timeout_secondes,
-    )
+    Passe par llm.py (Gemini). Si OPENROUTER_FALLBACK_ACTIF=1 et qu'une cle
+    OpenRouter est configuree, OpenRouter (OpenAI) prend le relais quand
+    Gemini echoue ou renvoie une reponse vide - ou passe en premier si
+    OPENROUTER_PRIORITAIRE=1. Sans ces variables : comportement inchange.
+    'gemini_client' n'est plus utilise ; model=None = modele par defaut."""
+    secours = bool(OPENROUTER_FALLBACK_ACTIF and OPENROUTER_API_KEY)
+
+    if secours and OPENROUTER_PRIORITAIRE:
+        try:
+            t = call_openrouter_llm(prompt, max_output_tokens=max_output_tokens)
+            if t.strip():
+                print(f"[Fisca AI][OpenRouter] SUCCÈS (prioritaire) — modèle={OPENROUTER_MODEL}.")
+                return t
+        except Exception as e:
+            print(f"[Fisca AI][OpenRouter] Échec prioritaire ({type(e).__name__}: {e}) — essai Gemini.")
+
+    erreur, texte = None, ""
+    try:
+        texte = llm.rediger(
+            prompt, modele=model,
+            max_output_tokens=max_output_tokens, timeout_secondes=timeout_secondes,
+        )
+        if texte and texte.strip():
+            return texte
+    except Exception as e:
+        erreur = e
+
+    if secours and not OPENROUTER_PRIORITAIRE:
+        print(
+            f"[Fisca AI][OpenRouter] Gemini indisponible "
+            f"({type(erreur).__name__ if erreur else 'réponse vide'}) — bascule sur OpenRouter, modèle={OPENROUTER_MODEL}."
+        )
+        t = call_openrouter_llm(prompt, max_output_tokens=max_output_tokens)
+        print("[Fisca AI][OpenRouter] SUCCÈS (secours).")
+        return t
+
+    if erreur is not None:
+        raise erreur
+    return texte or ""
 
 
 def normaliser_question(gemini_client, question_brute, model=None, timeout_secondes=15):
