@@ -810,8 +810,6 @@ def embed_question(gemini_client, texte_question):
 #   OPENROUTER_MODEL           : defaut "openai/gpt-4o-mini"
 #   OPENROUTER_FALLBACK_ACTIF  : "1" = si Gemini echoue, OpenRouter prend le relais
 #   OPENROUTER_PRIORITAIRE     : "1" = OpenRouter d'abord, Gemini en secours
-#                                (utile pour tester OpenRouter seul, ou si le
-#                                quota Gemini est epuise)
 # ---------------------------------------------------------------------------
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini").strip()
