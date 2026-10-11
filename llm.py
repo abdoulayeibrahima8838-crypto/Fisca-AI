@@ -1,351 +1,227 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-llm.py — Point d'entrée UNIQUE de Fisca AI vers les modèles d'IA.
+llm_judge.py — Juge par lots les vraies conversations de Fisca AI
+(journal_conversations), pour detecter mauvaises reponses, incomprehension,
+et surtout ABSENCE de dispositions pertinentes (pas seulement la fidelite
+aux articles deja envoyes).
 
-Tout le reste du projet (rag.py, engine.py, agent.py) passe par ce fichier
-et ne connaît plus aucun fournisseur. Pour changer de fournisseur, seul ce
-fichier est à modifier : on ajoute une branche pour le nouveau fournisseur
-dans chacune des fonctions ci-dessous.
+Le juge est un modele DIFFERENT de celui qui redige les reponses (gpt-4o-mini
+en production) : il passe par OpenRouter, avec le modele de la variable
+OPENROUTER_JUGE_MODEL (defaut : openai/gpt-4o). Il ne consomme donc plus le
+quota de generation de Gemini. Reste le quota d'embeddings Gemini (1000/jour)
+pour la recherche elargie : 1 embedding par conversation jugee.
+A lancer par petits lots (--limite 20-50).
 
-Fonctions offertes au reste du projet :
-  - disponible()                 : l'IA est-elle configurée ?
-  - rediger(...)                 : générer un texte (réponse, normalisation, reranking…)
-  - rediger_avec_file_search(...) : ancien chemin File Search (propre à Gemini)
-  - vectoriser_question(texte)   : embedding d'une question (recherche pgvector)
-  - vectoriser_document(...)     : embedding d'un article (indexation)
-  - SessionOutils                : conversation avec outils, pour les agents
-
-Variables d'environnement (Render) :
-  LLM_FOURNISSEUR        fournisseur de rédaction et des agents (défaut : gemini)
-  LLM_MODELE             modèle de rédaction (défaut : GEMINI_MODEL, puis gemini-3.6-flash)
-  EMBEDDING_FOURNISSEUR  fournisseur des vecteurs (défaut : gemini). Le garder sur
-                         gemini lors d'une migration évite de régénérer toute la base :
-                         des vecteurs produits par deux modèles différents ne sont pas
-                         comparables entre eux.
+Usage, depuis le Shell Render :
+    python llm_judge.py --limite 20
 """
-
+import argparse
+import json
 import os
+import time
 
-FOURNISSEUR = os.environ.get("LLM_FOURNISSEUR", "gemini").strip().lower()
-FOURNISSEUR_EMBEDDING = os.environ.get("EMBEDDING_FOURNISSEUR", "gemini").strip().lower()
-MODELE = os.environ.get("LLM_MODELE") or os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+import psycopg2
+import psycopg2.extras
+from openai import OpenAI
 
-TIMEOUT_DEFAUT_S = 35
+from rag import recherche_hybride, embed_question, _METADONNEES_PAR_ARTICLE
 
-# Les modeles Gemini recents « reflechissent » avant d'ecrire, et ces jetons de
-# reflexion sont DECOMPTES du plafond max_output_tokens : avec un plafond de
-# 1500, la reflexion peut en consommer l'essentiel et la reponse visible est
-# coupee en pleine phrase. Cette marge est ajoutee au plafond demande par
-# l'appelant, pour que ce plafond s'applique bien au texte visible.
-MARGE_REFLEXION = int(os.environ.get("LLM_MARGE_REFLEXION", "4096"))
+# Le juge doit etre un modele different de celui qui redige (OPENROUTER_MODEL,
+# gpt-4o-mini par defaut dans rag.py). Modifiable sans toucher au code.
+JUGE_MODEL = os.environ.get("OPENROUTER_JUGE_MODEL", "openai/gpt-4o").strip()
+TOP_K_RECHERCHE_ELARGIE = 15
 
-CONSIGNE_REFORMULATION = (
-    "Reformule entierement avec tes propres mots : ne recopie pas de longs "
-    "passages des articles, cite seulement leur numero et les valeurs utiles "
-    "(taux, delais, montants)."
-)
+PROMPT_JUGE = """Tu es un juge expert en fiscalite nigerienne, charge d'evaluer la qualite d'une reponse deja donnee par un assistant fiscal (Fisca AI), en te basant UNIQUEMENT sur les textes officiels fournis ci-dessous - jamais sur tes propres connaissances.
 
-# Doivent correspondre à la base existante (schema.sql, generer_embeddings.py)
-EMBEDDING_MODELE = "gemini-embedding-001"
-EMBEDDING_DIMENSIONS = 1536
+QUESTION POSEE PAR L'UTILISATEUR :
+{question}
+
+REPONSE DONNEE PAR FISCA AI :
+{reponse}
+
+ARTICLES REELLEMENT ENVOYES A FISCA AI POUR REPONDRE (leur texte complet) :
+{articles_utilises_texte}
+
+AUTRES ARTICLES POTENTIELLEMENT PERTINENTS, TROUVES PAR UNE RECHERCHE PLUS LARGE MAIS PAS ENVOYES A FISCA AI (uniquement leurs numeros et themes, pas leur texte complet) :
+{articles_elargis_liste}
+
+LIENS DEJA CONNUS DE NOTRE BASE (articles/procedures generalement associes aux articles utilises, meme si non envoyes) :
+{liens_connus}
+
+Evalue cette reponse selon DEUX AXES DISTINCTS, puis reponds UNIQUEMENT en JSON valide, sans aucun texte avant ou apres, selon exactement ce format :
+
+{{
+  "fidelite": {{
+    "score": <entier 0-100, a quel point la reponse est fidele aux articles reellement envoyes>,
+    "hallucination": <true si la reponse invente ou deforme un fait absent des articles envoyes, sinon false>,
+    "details": "<une phrase expliquant le score>"
+  }},
+  "completude": {{
+    "dispositions_manquantes": <true si des articles pertinents semblent absents de ce qui a ete envoye a Fisca AI>,
+    "articles_suggeres": [<liste de numeros d'articles parmi ceux listes plus haut qui auraient du etre envoyes, vide si aucun>],
+    "raison": "<une phrase expliquant pourquoi, vide si dispositions_manquantes est false>"
+  }},
+  "incomprehension": <true si Fisca AI semble avoir mal compris la question elle-meme (hors-sujet, contresens), sinon false>,
+  "recommandation": "<une phrase concrete et actionnable pour ameliorer ce cas precis, ou vide si tout est bon>"
+}}
+"""
 
 
-class FournisseurNonPrisEnCharge(Exception):
-    """Le fournisseur configuré n'est pas (encore) implémenté dans llm.py."""
+def construire_liens_connus(articles_ids):
+    """Rassemble les liens_implicites et procedures_generales_associees
+    deja presents dans nos donnees (Phase 5) pour les articles utilises -
+    sans nouvel appel, cette info est deja calculee."""
+    liens = []
+    for aid in articles_ids:
+        meta = _METADONNEES_PAR_ARTICLE.get(aid, {})
+        li = meta.get("liens_implicites", {})
+        procs = li.get("procedures_generales_meme_theme", [])
+        if procs:
+            liens.append(f"Article {aid} — procédures générales associées : {', '.join(procs)}")
+        for theme, ids in (li.get("meme_matiere_autres_themes") or {}).items():
+            if ids:
+                liens.append(f"Article {aid} — autres articles du thème « {theme} » : {', '.join(ids[:5])}")
+    return "\n".join(liens) if liens else "(aucun lien connu recensé pour ces articles)"
 
 
-def _non_pris_en_charge(fournisseur, fonction):
-    return FournisseurNonPrisEnCharge(
-        f"Le fournisseur « {fournisseur} » n'est pas encore pris en charge par llm.{fonction}()."
+def executer_recherche_elargie(db, client, question):
+    """Recherche elargie (15 candidats) faite specifiquement pour le
+    jugement, independante de ce qui a ete reellement utilise en
+    production - permet au juge de voir ce qui EXISTE meme si non envoye."""
+    try:
+        vecteur = embed_question(None, question)
+        pivots = recherche_hybride(db, vecteur, question, top_k=TOP_K_RECHERCHE_ELARGIE)
+        return [(a.article_id, a.matiere_fiscale) for a in pivots]
+    except Exception as e:
+        print(f"    (recherche élargie échouée : {type(e).__name__}: {e})")
+        return []
+
+
+def recuperer_texte_articles(db, articles_ids):
+    if not articles_ids:
+        return "(aucun article n'a été envoyé à Fisca AI pour cette réponse)"
+    cur = db.cursor()
+    blocs = []
+    for aid in articles_ids:
+        cur.execute("SELECT text FROM cgi_articles WHERE article_id = %s", (aid,))
+        row = cur.fetchone()
+        if row:
+            blocs.append(f"[Article {aid}]\n{row['text']}")
+    return "\n\n".join(blocs) if blocs else "(articles introuvables)"
+
+
+def juger_conversation(db, client, conversation):
+    question = conversation["question_brute"]
+    reponse = conversation["reponse"] or ""
+    articles_ids = json.loads(conversation["articles_utilises"]) if conversation["articles_utilises"] else []
+
+    articles_texte = recuperer_texte_articles(db, articles_ids)
+    elargis = executer_recherche_elargie(db, client, question)
+    elargis_hors_utilises = [(aid, mat) for aid, mat in elargis if aid not in articles_ids]
+    elargis_texte = (
+        "\n".join(f"- Article {aid} ({mat})" for aid, mat in elargis_hors_utilises)
+        if elargis_hors_utilises else "(aucun autre article trouvé par la recherche élargie)"
+    )
+    liens_connus = construire_liens_connus(articles_ids)
+
+    prompt = PROMPT_JUGE.format(
+        question=question, reponse=reponse,
+        articles_utilises_texte=articles_texte,
+        articles_elargis_liste=elargis_texte,
+        liens_connus=liens_connus,
     )
 
-
-# ===========================================================================
-# GEMINI
-# ===========================================================================
-
-_client_gemini = None
-
-
-def _gemini():
-    """Client Gemini unique, créé au premier usage. None si la clé est absente."""
-    global _client_gemini
-    if _client_gemini is None:
-        cle = os.environ.get("GEMINI_API_KEY")
-        if not cle:
-            return None
-        from google import genai
-        from google.genai import types
-        _client_gemini = genai.Client(
-            api_key=cle,
-            http_options=types.HttpOptions(timeout=TIMEOUT_DEFAUT_S * 1000),
-        )
-    return _client_gemini
+    r = client.chat.completions.create(
+        model=JUGE_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1000,
+        temperature=0,
+        response_format={"type": "json_object"},
+        timeout=60,
+    )
+    texte = ((r.choices[0].message.content if r.choices else "") or "").strip()
+    if texte.startswith("```"):
+        texte = texte.strip("`").strip()
+        if texte.lower().startswith("json"):
+            texte = texte[4:].strip()
+    return json.loads(texte)
 
 
-def _exiger_gemini():
-    client = _gemini()
-    if client is None:
-        raise RuntimeError("GEMINI_API_KEY absente : Gemini n'est pas configuré.")
-    return client
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--limite", type=int, default=20, help="Nombre de conversations à juger dans ce lot")
+    args = parser.parse_args()
 
+    DATABASE_URL = os.environ["DATABASE_URL"]
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-def _contenus_gemini(historique, texte):
-    """Échanges précédents (question, réponse) puis le nouveau message."""
-    from google.genai import types
-    contenus = []
-    for question_precedente, reponse_precedente in historique or []:
-        contenus.append(types.Content(role="user", parts=[types.Part(text=str(question_precedente))]))
-        contenus.append(types.Content(role="model", parts=[types.Part(text=str(reponse_precedente))]))
-    contenus.append(types.Content(role="user", parts=[types.Part(text=texte)]))
-    return contenus
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    conn.autocommit = True
+    cle = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if not cle:
+        raise SystemExit("OPENROUTER_API_KEY manquante : le juge passe par OpenRouter.")
+    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=cle,
+                    default_headers={"HTTP-Referer": "https://fiscaai.com", "X-Title": "Fisca AI Judge"})
 
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, question_brute, reponse, articles_utilises FROM journal_conversations "
+        "WHERE juge = FALSE ORDER BY date_heure ASC LIMIT %s",
+        (args.limite,),
+    )
+    conversations = cur.fetchall()
 
-def _schema_gemini(schema):
-    """Schéma JSON neutre (types en minuscules) -> types.Schema de Gemini."""
-    from google.genai import types
-    kw = {"type": getattr(types.Type, str(schema.get("type", "object")).upper())}
-    if schema.get("description"):
-        kw["description"] = schema["description"]
-    if schema.get("properties"):
-        kw["properties"] = {k: _schema_gemini(v) for k, v in schema["properties"].items()}
-    if schema.get("required"):
-        kw["required"] = list(schema["required"])
-    if schema.get("items"):
-        kw["items"] = _schema_gemini(schema["items"])
-    return types.Schema(**kw)
+    print(f"=== LLM Judge ({JUGE_MODEL}) — {len(conversations)} conversation(s) à juger (lot demandé : {args.limite}) ===\n")
 
+    nb_juges = 0
+    nb_hallucinations = 0
+    nb_incompletes = 0
+    nb_incomprehensions = 0
 
-def _outils_gemini(outils):
-    from google.genai import types
-    declarations = []
-    for o in outils:
-        parametres = o.get("parametres") or {}
-        declarations.append(types.FunctionDeclaration(
-            name=o["nom"],
-            description=o.get("description", ""),
-            parameters=_schema_gemini(parametres) if parametres.get("properties") else None,
-        ))
-    return types.Tool(function_declarations=declarations)
+    for conv in conversations:
+        print(f"[id={conv['id']}] {conv['question_brute'][:70]}")
+        try:
+            jugement = juger_conversation(conn, client, conv)
 
-
-def _motif_arret(reponse):
-    try:
-        motif = reponse.candidates[0].finish_reason
-        return getattr(motif, "name", str(motif)) if motif is not None else ""
-    except (AttributeError, IndexError, TypeError):
-        return ""
-
-
-def _generer_gemini(contenus, config, modele, contexte):
-    """Appel Gemini commun a rediger() et rediger_avec_file_search() :
-    - ajoute la marge de reflexion au plafond de sortie ;
-    - journalise toute reponse interrompue (motif, jetons de reflexion) ;
-    - si Gemini coupe la reponse parce qu'elle recopie trop le texte source
-      (motif RECITATION), refait UNE tentative en demandant de reformuler."""
-    from google.genai import types
-    client = _exiger_gemini()
-    config = dict(config)
-    config["max_output_tokens"] = config.get("max_output_tokens", 1500) + MARGE_REFLEXION
-
-    for tentative in (1, 2):
-        reponse = client.models.generate_content(
-            model=modele or MODELE, contents=contenus, config=types.GenerateContentConfig(**config),
-        )
-        texte = getattr(reponse, "text", "") or ""
-        motif = _motif_arret(reponse)
-        if motif and motif not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
-            usage = getattr(reponse, "usage_metadata", None)
-            print(
-                f"[Fisca AI][LLM] Réponse interrompue ({contexte}, essai {tentative}) — motif={motif}, "
-                f"jetons réflexion={getattr(usage, 'thoughts_token_count', None)}, "
-                f"jetons texte={getattr(usage, 'candidates_token_count', None)}, "
-                f"taille={len(texte)} caractères."
+            cur.execute(
+                "UPDATE journal_conversations SET juge = TRUE, date_jugement = NOW(), score_judge = %s, judge_details = %s WHERE id = %s",
+                (jugement.get("fidelite", {}).get("score"), json.dumps(jugement, ensure_ascii=False), conv["id"]),
             )
-            if motif == "RECITATION" and tentative == 1:
-                systeme = config.get("system_instruction") or ""
-                config["system_instruction"] = (systeme + "\n\n" + CONSIGNE_REFORMULATION).strip()
-                continue
-        return texte
-    return texte
+            nb_juges += 1
+            if jugement.get("fidelite", {}).get("hallucination"):
+                nb_hallucinations += 1
+                print(f"    🔴 HALLUCINATION détectée — {jugement['fidelite']['details']}")
+            if jugement.get("completude", {}).get("dispositions_manquantes"):
+                nb_incompletes += 1
+                print(f"    ⚠️  Dispositions manquantes — suggéré : {jugement['completude']['articles_suggeres']}")
+            if jugement.get("incomprehension"):
+                nb_incomprehensions += 1
+                print(f"    ⚠️  Incompréhension détectée")
+            if not any([jugement.get("fidelite", {}).get("hallucination"),
+                        jugement.get("completude", {}).get("dispositions_manquantes"),
+                        jugement.get("incomprehension")]):
+                print(f"    ✅ Score fidélité : {jugement.get('fidelite', {}).get('score')}/100")
+
+        except Exception as e:
+            print(f"    ❌ Jugement échoué : {type(e).__name__}: {e}")
+        time.sleep(1)
+        print()
+
+    print("=" * 60)
+    print(f"Conversations jugées ce lot : {nb_juges}/{len(conversations)}")
+    print(f"  🔴 Hallucinations détectées      : {nb_hallucinations}")
+    print(f"  ⚠️  Dispositions manquantes       : {nb_incompletes}")
+    print(f"  ⚠️  Incompréhensions détectées    : {nb_incomprehensions}")
+
+    cur.execute("SELECT COUNT(*) AS n FROM journal_conversations WHERE juge = FALSE")
+    restantes = cur.fetchone()["n"]
+    print(f"\nConversations restant à juger : {restantes}")
+
+    conn.close()
 
 
-# ===========================================================================
-# FONCTIONS PUBLIQUES
-# ===========================================================================
-
-def disponible():
-    """True si le fournisseur de rédaction est configuré et utilisable."""
-    try:
-        if FOURNISSEUR == "gemini":
-            return _gemini() is not None
-    except Exception as e:
-        print(f"[Fisca AI][LLM] Fournisseur « {FOURNISSEUR} » indisponible ({type(e).__name__}: {e}).")
-    return False
-
-
-def client_brut():
-    """Client natif du fournisseur (ou None). Réservé aux scripts annexes qui
-    n'ont pas encore été convertis ; le code de production ne doit pas l'utiliser
-    pour appeler le modèle directement."""
-    return _gemini() if FOURNISSEUR == "gemini" and disponible() else None
-
-
-def rediger(prompt, *, systeme=None, historique=None, modele=None,
-            max_output_tokens=1500, timeout_secondes=TIMEOUT_DEFAUT_S, format_json=False):
-    """Génère un texte. Renvoie "" si le modèle ne répond rien ; lève une
-    exception en cas d'erreur (délai dépassé, quota…) : c'est à l'appelant de
-    décider du repli, comme avant."""
-    if FOURNISSEUR == "gemini":
-        from google.genai import types
-        config = dict(
-            max_output_tokens=max_output_tokens,
-            http_options=types.HttpOptions(timeout=timeout_secondes * 1000),
-        )
-        if systeme:
-            config["system_instruction"] = systeme
-        if format_json:
-            config["response_mime_type"] = "application/json"
-        return _generer_gemini(
-            _contenus_gemini(historique, prompt) if historique else prompt,
-            config, modele, "rediger",
-        )
-    raise _non_pris_en_charge(FOURNISSEUR, "rediger")
-
-
-def rediger_avec_file_search(question, *, store, systeme=None, historique=None, modele=None,
-                             max_output_tokens=1500, timeout_secondes=TIMEOUT_DEFAUT_S):
-    """Ancien chemin « File Search » : la recherche documentaire est faite par
-    Gemini lui-même. Propre à Gemini, sans équivalent direct ailleurs : avec un
-    autre fournisseur, lève FournisseurNonPrisEnCharge (l'appelant bascule alors
-    sur le moteur suivant)."""
-    if FOURNISSEUR == "gemini":
-        from google.genai import types
-        config = dict(
-            max_output_tokens=max_output_tokens,
-            http_options=types.HttpOptions(timeout=timeout_secondes * 1000),
-            tools=[types.Tool(file_search=types.FileSearch(file_search_store_names=[store]))],
-        )
-        if systeme:
-            config["system_instruction"] = systeme
-        return _generer_gemini(_contenus_gemini(historique, question), config, modele, "file_search")
-    raise _non_pris_en_charge(FOURNISSEUR, "rediger_avec_file_search")
-
-
-def vectoriser_question(texte):
-    """Embedding d'une QUESTION (task_type RETRIEVAL_QUERY), pour pgvector."""
-    if FOURNISSEUR_EMBEDDING == "gemini":
-        from google.genai import types
-        resultat = _exiger_gemini().models.embed_content(
-            model=EMBEDDING_MODELE,
-            contents=texte,
-            config=types.EmbedContentConfig(
-                task_type="RETRIEVAL_QUERY",
-                output_dimensionality=EMBEDDING_DIMENSIONS,
-            ),
-        )
-        return resultat.embeddings[0].values
-    raise _non_pris_en_charge(FOURNISSEUR_EMBEDDING, "vectoriser_question")
-
-
-def vectoriser_document(texte, titre=None):
-    """Embedding d'un ARTICLE (task_type RETRIEVAL_DOCUMENT), pour l'indexation."""
-    if FOURNISSEUR_EMBEDDING == "gemini":
-        from google.genai import types
-        config = dict(task_type="RETRIEVAL_DOCUMENT", output_dimensionality=EMBEDDING_DIMENSIONS)
-        if titre:
-            config["title"] = titre
-        resultat = _exiger_gemini().models.embed_content(
-            model=EMBEDDING_MODELE, contents=texte, config=types.EmbedContentConfig(**config),
-        )
-        return resultat.embeddings[0].values
-    raise _non_pris_en_charge(FOURNISSEUR_EMBEDDING, "vectoriser_document")
-
-
-# ===========================================================================
-# CONVERSATION AVEC OUTILS (agents)
-# ===========================================================================
-
-class AppelOutil:
-    """Un outil que le modèle demande d'exécuter."""
-
-    def __init__(self, nom, args, identifiant=None):
-        self.nom = nom
-        self.args = args
-        self.identifiant = identifiant  # utile pour les fournisseurs qui numérotent les appels
-
-
-class ReponseModele:
-    def __init__(self, texte="", appels=None, tokens_entree=0, tokens_sortie=0):
-        self.texte = texte
-        self.appels = appels or []
-        self.tokens_entree = tokens_entree
-        self.tokens_sortie = tokens_sortie
-
-
-class SessionOutils:
-    """Conversation entre un agent et le modèle, indépendante du fournisseur.
-
-    Les outils sont décrits dans un format neutre :
-        {"nom": "calculer", "description": "...",
-         "parametres": {"type": "object", "properties": {...}, "required": [...]}}
-
-    Usage :
-        session = SessionOutils(systeme, outils, question, historique)
-        reponse = session.envoyer()                 # le modèle répond ou demande des outils
-        session.ajouter_resultats([(appel, {...})])  # on lui renvoie les résultats
-        reponse = session.envoyer(conclure=True)    # dernier tour : réponse forcée, sans outils
-    """
-
-    def __init__(self, systeme, outils, question, historique=None, *, modele=None,
-                 max_output_tokens=1500, temperature=0.1, timeout_secondes=TIMEOUT_DEFAUT_S):
-        self.systeme = systeme
-        self.outils = outils
-        self.modele = modele or MODELE
-        self.max_output_tokens = max_output_tokens
-        self.temperature = temperature
-        self.timeout_secondes = timeout_secondes
-
-        if FOURNISSEUR == "gemini":
-            self._contenus = _contenus_gemini(historique, question)
-            self._outils_natifs = _outils_gemini(outils)
-        else:
-            raise _non_pris_en_charge(FOURNISSEUR, "SessionOutils")
-
-    def envoyer(self, conclure=False):
-        if FOURNISSEUR == "gemini":
-            from google.genai import types
-            config = types.GenerateContentConfig(
-                system_instruction=self.systeme,
-                temperature=self.temperature,
-                max_output_tokens=self.max_output_tokens + MARGE_REFLEXION,
-                http_options=types.HttpOptions(timeout=self.timeout_secondes * 1000),
-                tools=[self._outils_natifs],
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-                tool_config=types.ToolConfig(function_calling_config=types.FunctionCallingConfig(
-                    mode="NONE" if conclure else "AUTO")),
-            )
-            reponse = _exiger_gemini().models.generate_content(
-                model=self.modele, contents=self._contenus, config=config)
-
-            usage = getattr(reponse, "usage_metadata", None)
-            appels_natifs = reponse.function_calls or []
-            if appels_natifs and reponse.candidates:
-                self._contenus.append(reponse.candidates[0].content)
-            return ReponseModele(
-                texte="" if appels_natifs else (getattr(reponse, "text", "") or ""),
-                appels=[AppelOutil(a.name, dict(a.args or {}), getattr(a, "id", None)) for a in appels_natifs],
-                tokens_entree=(getattr(usage, "prompt_token_count", 0) or 0) if usage else 0,
-                tokens_sortie=(getattr(usage, "candidates_token_count", 0) or 0) if usage else 0,
-            )
-        raise _non_pris_en_charge(FOURNISSEUR, "SessionOutils.envoyer")
-
-    def ajouter_resultats(self, resultats):
-        """resultats : liste de (AppelOutil, dict de résultat)."""
-        if FOURNISSEUR == "gemini":
-            from google.genai import types
-            parties = [types.Part.from_function_response(name=appel.nom, response=resultat)
-                       for appel, resultat in resultats]
-            self._contenus.append(types.Content(role="user", parts=parties))
-            return
-        raise _non_pris_en_charge(FOURNISSEUR, "SessionOutils.ajouter_resultats")
+if __name__ == "__main__":
+    main()
 
