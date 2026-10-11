@@ -2,23 +2,14 @@
 """
 Moteur de comprehension de Fisca AI.
 
-Architecture "filet de securite" a 3 etages :
-1) Gemini File Search (PRIORITAIRE) - si configure et si l'appel reussit.
-2) OpenAI File Search (SECOURS) - ACTUELLEMENT DESACTIVE (voir
-   OPENAI_FALLBACK_ACTIF ci-dessous), le compte OpenAI n'ayant plus de
-   credit operationnel. Reactivable a tout moment via une seule
-   variable d'environnement, sans toucher au code.
-3) Moteur local base sur mots-cles (DERNIER RECOURS) - toujours
-   disponible, aucune dependance externe.
-
-ARCHITECTURE TEMPORAIRE ACTUELLE : Question -> Gemini (File Search) ->
-si succes, reponse Gemini -> si echec/timeout, moteur local directement
-(OpenAI saute).
-
-ARCHITECTURE CIBLE (une fois OpenAI de nouveau credite) : Gemini ->
-OpenAI -> moteur local. Pour y repasser, il suffira de positionner
-OPENAI_FALLBACK_ACTIF=1 dans les variables d'environnement Render -
-aucune modification de code necessaire.
+Architecture actuelle (SANS File Search) :
+1) RAG maison (recherche hybride pgvector + mots-cles dans notre base) : il
+   selectionne les articles du CGI 2026.
+2) Redaction : OpenAI (via OpenRouter) en PRIORITE ; si OpenAI est
+   indisponible, Gemini redige a sa place (voir call_gemini_llm dans rag.py).
+3) Si la redaction echoue des deux cotes : texte brut de l'article (niveau 2).
+4) Si la recherche elle-meme echoue : moteur local (si MOTEUR_LOCAL_ACTIF=1)
+   sinon message d'indisponibilite.
 
 MOTEUR LOCAL - v3 (ajoute un seuil de couverture) :
 La v2 corrigeait le double-comptage (chaque mot de la question ne
@@ -135,13 +126,6 @@ SYSTEM_PROMPT = (
 # ---------------------------------------------------------------------------
 GEMINI_TIMEOUT_SECONDS = 35
 GEMINI_MAX_OUTPUT_TOKENS = 1500
-OPENAI_TIMEOUT_SECONDS = 12
-
-# Bascule OpenAI - voir le commentaire d'architecture en tete de fichier.
-# Desactive par defaut : passer a "1" sur Render pour reactiver le
-# filet de secours OpenAI des que le compte aura de nouveau du credit,
-# sans toucher au code.
-OPENAI_FALLBACK_ACTIF = os.environ.get("OPENAI_FALLBACK_ACTIF", "0") == "1"
 
 # Bascule du moteur local - SUSPENDU par defaut le temps de retravailler
 # en profondeur son contenu (cache_data.py). Tant qu'il reste suspendu,
@@ -151,16 +135,8 @@ OPENAI_FALLBACK_ACTIF = os.environ.get("OPENAI_FALLBACK_ACTIF", "0") == "1"
 # reactiver une fois le travail de fond termine, sans toucher au code.
 MOTEUR_LOCAL_ACTIF = os.environ.get("MOTEUR_LOCAL_ACTIF", "0") == "1"
 
-# Bascule de diagnostic - permet de tester Gemini SANS File Search
-# (juste le modele, sans recherche documentaire) pour determiner si les
-# 504 viennent du modele lui-meme ou specifiquement de la recherche dans
-# le File Search Store. Mettre GEMINI_FILE_SEARCH_ACTIF=0 sur Render
-# pour ce test, puis remettre a 1 (ou retirer la variable) ensuite.
-GEMINI_FILE_SEARCH_ACTIF = os.environ.get("GEMINI_FILE_SEARCH_ACTIF", "1") == "1"
-
 # ---------------------------------------------------------------------------
-# Partie IA n°1 - Gemini (PRIORITAIRE) - optionnelle, activee seulement si
-# configuree. Utilise le File Search Store cree via Colab.
+# Configuration IA - Gemini sert aux embeddings et de secours de redaction.
 # ---------------------------------------------------------------------------
 # Tous les appels aux modeles d'IA passent desormais par llm.py (point
 # d'entree unique). Changer de fournisseur = modifier llm.py seulement.
@@ -170,80 +146,7 @@ import llm
 
 _client_ia = llm.client_brut() if llm.disponible() else None
 
-GEMINI_FILE_SEARCH_STORE = os.environ.get("GEMINI_FILE_SEARCH_STORE")
 MODELE_IA = llm.MODELE
-
-
-def repondre_gemini(question_brute, historique=None):
-    """Tente une reponse via Gemini (avec File Search si
-    GEMINI_FILE_SEARCH_ACTIF et GEMINI_FILE_SEARCH_STORE sont tous deux
-    actifs, sans File Search sinon - utile pour le diagnostic). Retourne
-    None si indisponible pour une raison quelconque - l'appelant bascule
-    alors sur OpenAI (si actif) puis sur le moteur local.
-
-    'historique' est une liste optionnelle de tuples (question, reponse)
-    des echanges precedents de la MEME conversation, transmise pour que
-    Gemini comprenne les questions de suivi ('et mes avantages ?').
-
-    Chronometrage detaille : chaque appel (succes ou echec) est logge
-    avec sa duree exacte, la taille de la reponse ou le type d'erreur,
-    et le nombre d'echanges d'historique transmis - c'est ce qui permet
-    de savoir precisement combien de temps Gemini met avant un eventuel
-    504 DEADLINE_EXCEEDED, plutot que de deviner."""
-    if not _client_ia:
-        return None
-
-    nb_echanges = len(historique or [])
-    utilise_file_search = bool(GEMINI_FILE_SEARCH_ACTIF and GEMINI_FILE_SEARCH_STORE)
-    debut = time.time()
-
-    try:
-        if utilise_file_search:
-            texte = llm.rediger_avec_file_search(
-                question_brute, store=GEMINI_FILE_SEARCH_STORE, systeme=SYSTEM_PROMPT,
-                historique=historique, modele=MODELE_IA,
-                max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS, timeout_secondes=GEMINI_TIMEOUT_SECONDS,
-            )
-        else:
-            texte = llm.rediger(
-                question_brute, systeme=SYSTEM_PROMPT,
-                historique=historique, modele=MODELE_IA,
-                max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS, timeout_secondes=GEMINI_TIMEOUT_SECONDS,
-            )
-        duree = time.time() - debut
-        if not texte.strip():
-            print(
-                f"[Fisca AI][Gemini] Reponse VIDE - duree={duree:.1f}s, "
-                f"file_search={utilise_file_search}, historique={nb_echanges} echange(s)."
-            )
-            return None
-
-        print(
-            f"[Fisca AI][Gemini] SUCCES - duree={duree:.1f}s, "
-            f"file_search={utilise_file_search}, taille_reponse={len(texte)} caracteres, "
-            f"historique={nb_echanges} echange(s)."
-        )
-        return {
-            "niveau": 1,
-            "reponse": texte.strip(),
-            "source": "Reponse generee par l'IA (Gemini) a partir des documents officiels charges",
-            "verified": None,
-            "question_comprise": question_brute,
-            "moteur": "gemini",
-        }
-    except Exception as e:
-        duree = time.time() - debut
-        if OPENAI_FALLBACK_ACTIF:
-            suite = "OpenAI"
-        elif MOTEUR_LOCAL_ACTIF:
-            suite = "le moteur local"
-        else:
-            suite = "un message d'indisponibilite (moteur local suspendu)"
-        print(
-            f"[Fisca AI][Gemini] ECHEC ({type(e).__name__}: {e}) - duree={duree:.1f}s, "
-            f"file_search={utilise_file_search}, historique={nb_echanges} echange(s) - bascule sur {suite}."
-        )
-        return None
 
 
 def generer_titre_conversation(question, reponse):
@@ -257,53 +160,6 @@ def generer_titre_conversation(question, reponse):
         coupe = titre[:40].rsplit(" ", 1)[0]
         titre = (coupe or titre[:40]) + "…"
     return titre or "Discussion"
-
-
-# ---------------------------------------------------------------------------
-# Partie IA n°2 - OpenAI (SECOURS) - voir OPENAI_FALLBACK_ACTIF en haut du
-# fichier : desactive par defaut le temps que le compte soit recredite.
-# ---------------------------------------------------------------------------
-try:
-    from openai import OpenAI
-    _client = OpenAI() if os.environ.get("OPENAI_API_KEY") else None
-except Exception:
-    _client = None
-
-OPENAI_VECTOR_STORE_ID = os.environ.get("OPENAI_VECTOR_STORE_ID")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-
-
-def repondre_ia(question_brute, historique=None):
-    if not _client or not OPENAI_VECTOR_STORE_ID:
-        return None
-    try:
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        for question_precedente, reponse_precedente in historique or []:
-            messages.append({"role": "user", "content": question_precedente})
-            messages.append({"role": "assistant", "content": reponse_precedente})
-        messages.append({"role": "user", "content": question_brute})
-
-        response = _client.responses.create(
-            model=OPENAI_MODEL,
-            input=messages,
-            tools=[{"type": "file_search", "vector_store_ids": [OPENAI_VECTOR_STORE_ID], "max_num_results": 4}],
-            max_output_tokens=2048,
-            timeout=OPENAI_TIMEOUT_SECONDS,
-        )
-        texte = getattr(response, "output_text", "") or ""
-        if not texte.strip():
-            return None
-        return {
-            "niveau": 1,
-            "reponse": texte.strip(),
-            "source": "Reponse generee par l'IA (OpenAI) a partir des documents officiels charges",
-            "verified": None,
-            "question_comprise": question_brute,
-            "moteur": "openai",
-        }
-    except Exception as e:
-        print(f"[Fisca AI] Echec de l'appel OpenAI ({type(e).__name__}: {e}) - bascule sur le moteur local.")
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -1000,14 +856,14 @@ def repondre_agent(question_brute, db, historique=None):
 
 
 def _repondre_interne(question_brute, historique=None, db=None):
-    """Ordre de priorite ACTUEL (temporaire, voir tete de fichier) :
-    Gemini (File Search) -> moteur local, SI ce dernier est actif.
+    """Ordre de priorite ACTUEL : agent (si actif) -> RAG maison (OpenAI en
+    priorite pour la redaction, Gemini en secours) -> moteur local, SI ce
+    dernier est actif. Plus aucun File Search.
 
-    OpenAI est saute tant que OPENAI_FALLBACK_ACTIF n'est pas active
-    (compte sans credit). Le moteur local est SUSPENDU par defaut
+    Le moteur local est SUSPENDU par defaut
     (MOTEUR_LOCAL_ACTIF) le temps qu'il soit retravaille en profondeur -
     ses reponses etaient parfois source de confusion. Tant qu'il reste
-    suspendu, un echec Gemini renvoie un message d'indisponibilite clair
+    suspendu, un echec du RAG renvoie un message d'indisponibilite clair
     plutot qu'une reponse locale potentiellement confuse.
 
     Chaque etage n'est tente que si le precedent est indisponible ou
@@ -1028,15 +884,6 @@ def _repondre_interne(question_brute, historique=None, db=None):
             return resultat
 
         resultat = repondre_rag(question_brute, db, historique)
-        if resultat is not None:
-            return resultat
-
-    resultat = repondre_gemini(question_brute, historique)
-    if resultat is not None:
-        return resultat
-
-    if OPENAI_FALLBACK_ACTIF:
-        resultat = repondre_ia(question_brute, historique)
         if resultat is not None:
             return resultat
 
